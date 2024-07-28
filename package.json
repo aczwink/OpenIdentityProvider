@@ -1,0 +1,22 @@
+{
+  "type": "module",
+  "name": "oidp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "run-dev-server": "nodemon --exec \"tsc; node dist/main.js\""
+  },
+  "keywords": [],
+  "author": "Amir Czwink",
+  "license": "AGPL-3.0",
+  "dependencies": {
+    "oidc-provider": "^8.5.1",
+    "acts-util-core": "*"
+  },
+  "devDependencies": {
+    "@types/oidc-provider": "^8.5.1",
+    "nodemon": "^3.1.4",
+    "typescript": "^5.5.4"
+  }
+}
