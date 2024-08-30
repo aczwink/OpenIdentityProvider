@@ -11,11 +11,12 @@
   "author": "Amir Czwink",
   "license": "AGPL-3.0",
   "dependencies": {
-    "oidc-provider": "^8.5.1",
-    "acts-util-core": "*"
+    "acts-util-core": "*",
+    "acts-util-node": "*",
+    "oidc-provider": "^8.5.1"
   },
   "devDependencies": {
-    "@types/oidc-provider": "^8.5.1",
+    "@types/oidc-provider": "^8.5.2",
     "nodemon": "^3.1.4",
     "typescript": "^5.5.4"
   }

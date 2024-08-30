@@ -18,52 +18,58 @@
 import { Dictionary } from "acts-util-core";
 import { Adapter, AdapterPayload } from "oidc-provider";
 
-export class InteractionsAdapter implements Adapter
+export class MemoryAdapter implements Adapter
 {
     constructor()
     {
-        this.interactions = {};
+        this.storage = {};
     }
 
+    //Public methods
     public async upsert(id: string, payload: AdapterPayload, expiresIn: number): Promise<void | undefined>
     {
-        this.interactions[id] = payload;
+        this.storage[id] = payload;
     }
-
+    
     public async find(id: string): Promise<void | AdapterPayload | undefined>
     {
-        return this.interactions[id];
+        return this.storage[id];
     }
 
-    findByUserCode(userCode: string): Promise<void | AdapterPayload | undefined>
-    {
-        console.log("findByUserCode", arguments);
+    findByUserCode(userCode: string): Promise<void | AdapterPayload | undefined> {
+        console.log("MemoryAdapter.findByUserCode");
         throw new Error("Method not implemented.");
     }
 
-    findByUid(uid: string): Promise<void | AdapterPayload | undefined>
+    public async findByUid(uid: string): Promise<void | AdapterPayload | undefined>
     {
-        console.log("findByUid", arguments, "interactions");
-        throw new Error("Method not implemented.");
+        for (const id in this.storage)
+        {
+            if (Object.prototype.hasOwnProperty.call(this.storage, id))
+            {
+                const session = this.storage[id];
+                if(session?.uid === uid)
+                    return session;
+            }
+        }
+        return undefined;
     }
-
-    consume(id: string): Promise<void | undefined>
+    
+    public async consume(id: string): Promise<void | undefined>
     {
-        console.log("consume", arguments);
-        throw new Error("Method not implemented.");
+        this.storage[id]!.consumed = Math.floor(Date.now() / 1000);
     }
 
     public async destroy(id: string): Promise<void | undefined>
     {
-        delete this.interactions[id];
+        delete this.storage[id];
     }
 
-    revokeByGrantId(grantId: string): Promise<void | undefined>
-    {
-        console.log("revokeByGrantId", arguments);
+    revokeByGrantId(grantId: string): Promise<void | undefined> {
+        console.log("MemoryAdapter.revokeByGrantId");
         throw new Error("Method not implemented.");
     }
 
-    //Private state
-    private interactions: Dictionary<AdapterPayload>;
+    //State
+    private storage: Dictionary<AdapterPayload>;
 }
