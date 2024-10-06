@@ -17,13 +17,17 @@
  * */
 import { Injectable } from "acts-util-node";
 
-/*const accounts: Account[] = [
-    {
-        accountId: "asdasd",
-    }
-];*/
-
 @Injectable
 export class UserAccountsController
 {
+    public Query(id: string)
+    {
+        const users = [
+            {
+                accountId: "asdasd",
+            }
+        ];
+
+        return users.find(x => x.accountId === id);
+    }
 }

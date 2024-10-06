@@ -5,17 +5,21 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "run-dev-server": "nodemon --exec \"tsc; node dist/main.js\""
+    "run-dev-server": "nodemon --exec \"npx acts-util-apilib; tsc; cp -r src/views dist/; node dist/main.js\""
   },
   "keywords": [],
   "author": "Amir Czwink",
   "license": "AGPL-3.0",
   "dependencies": {
+    "acts-util-apilib": "*",
     "acts-util-core": "*",
     "acts-util-node": "*",
+    "ejs": "^3.1.10",
+    "express": "^4.21.0",
     "oidc-provider": "^8.5.1"
   },
   "devDependencies": {
+    "@types/ejs": "^3.1.5",
     "@types/oidc-provider": "^8.5.2",
     "nodemon": "^3.1.4",
     "typescript": "^5.5.4"

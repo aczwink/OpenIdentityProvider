@@ -15,28 +15,3 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-import { Injectable } from "acts-util-node";
-
-interface AppRegistration
-{
-    clientId: string;
-    clientSecret: string;
-    redirectURIs: string[];
-}
-
-@Injectable
-export class AppRegistrationsController
-{
-    public Query(id: string)
-    {
-        const appRegs = [
-            {
-                clientId: "{your application id}",
-                clientSecret: "sequa",
-                redirectURIs: ["http://localhost:8081/oauth2"]
-            }
-        ];
-
-        return appRegs.find(x => x.clientId === id);
-    }
-}

@@ -17,7 +17,7 @@
  * */
 import { GlobalInjector } from "acts-util-node";
 import { Adapter, AdapterPayload } from "oidc-provider";
-import { AppRegistrationsController } from "./data-access/AppRegistrationsController.js";
+import { AppRegistrationsController } from "../data-access/AppRegistrationsController.js";
 
 export class ClientsAdapter implements Adapter
 {
@@ -38,7 +38,7 @@ export class ClientsAdapter implements Adapter
                 client_id: appReg.clientId,
                 client_secret: appReg.clientSecret,
                 redirect_uris: appReg.redirectURIs,
-                token_endpoint_auth_method: "none"
+                token_endpoint_auth_method: "none",
             };
         }
     }
