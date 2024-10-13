@@ -39,6 +39,7 @@ export class ClientsAdapter implements Adapter
                 client_secret: appReg.clientSecret,
                 redirect_uris: appReg.redirectURIs,
                 token_endpoint_auth_method: "none",
+                id_token_signed_response_alg: "ES256",
             };
         }
     }

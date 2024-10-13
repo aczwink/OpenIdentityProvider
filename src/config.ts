@@ -15,6 +15,9 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
+import fs from "fs";
 
 export const allowedOrigins = ["http://localhost:8081"];
 export const port = 3000;
+
+export const CONFIG_SIGNING_KEY = JSON.parse(fs.readFileSync("./signing_key.json", "utf-8"));

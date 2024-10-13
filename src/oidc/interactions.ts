@@ -28,6 +28,7 @@ function setNoCache(req: express.Request, res: express.Response, next: express.N
     res.set('cache-control', 'no-store');
     next();
 }
+const parseURLEncodedBody = urlencoded({ extended: false });
 
 interactionsRouter.use((req, res, next) => {
     const orig = res.render;
@@ -52,13 +53,32 @@ interactionsRouter.use((req, res, next) => {
 interactionsRouter.get('/interaction/:uid', setNoCache, async function(req: express.Request, res: express.Response, next: express.NextFunction)
 {
     const provider = GlobalInjector.Resolve(OIDCProviderService).provider;
-    const interactionDetails = await provider.interactionDetails(req, res);
+    let interactionDetails;
+    try
+    {
+        interactionDetails = await provider.interactionDetails(req, res);
+    }
+    catch(err)
+    {
+        return next(err);
+    }
+
     const params = interactionDetails.params as any;
 
     const client = await provider.Client.find(params.client_id);
     
     switch (interactionDetails.prompt.name)
     {
+        case "consent":
+        {
+            return res.render('interaction', {
+                client,
+                uid: interactionDetails.uid,
+                title: 'Authorize',
+                details: interactionDetails.prompt.details,
+                params: interactionDetails.params
+              });
+        }
         case 'login':
         {
             return res.render('login', {
@@ -72,7 +92,7 @@ interactionsRouter.get('/interaction/:uid', setNoCache, async function(req: expr
     }
 });
 
-interactionsRouter.post('/interaction/:uid/login', setNoCache, urlencoded({ extended: false }), async (req, res, next) =>
+interactionsRouter.post('/interaction/:uid/login', setNoCache, parseURLEncodedBody, async (req, res, next) =>
 {
     const provider = GlobalInjector.Resolve(OIDCProviderService).provider;
     const interactionDetails = await provider.interactionDetails(req, res);
@@ -86,8 +106,63 @@ interactionsRouter.post('/interaction/:uid/login', setNoCache, urlencoded({ exte
         },
     };
 
-    console.log(result);    
     await provider.interactionFinished(req, res, result, { mergeWithLastSubmission: false });
+});
+
+interactionsRouter.post('/interaction/:uid/confirm', setNoCache, parseURLEncodedBody, async (req, res, next) =>
+{
+    const provider = GlobalInjector.Resolve(OIDCProviderService).provider;
+    const interactionDetails = await provider.interactionDetails(req, res);
+
+    const accountId = interactionDetails.session?.accountId;
+    const params = interactionDetails.params;
+    const details = interactionDetails.prompt.details;
+
+    let { grantId } = interactionDetails;    
+    let grant;
+    
+    if (grantId)
+    {
+        // we'll be modifying existing grant in existing session
+        grant = await provider.Grant.find(grantId);
+        if(grant === undefined)
+            throw new Error("TODO: implement me");
+    }
+    else
+    {
+        // we're establishing a new grant
+        grant = new provider.Grant({
+            accountId,
+            clientId: params.client_id as any,
+        });
+    }
+    
+    if (details.missingOIDCScope)
+    {
+        grant.addOIDCScope((details.missingOIDCScope as any).join(' '));
+    }
+    if (details.missingOIDCClaims)
+    {
+        grant.addOIDCClaims(details.missingOIDCClaims as any);
+    }
+    if (details.missingResourceScopes)
+    {
+        for (const [indicator, scopes] of Object.entries(details.missingResourceScopes))
+        {
+            grant.addResourceScope(indicator, scopes.join(' '));
+        }
+    }
+    
+    grantId = await grant.save();
+    
+    const consent: any = {};
+    if (!interactionDetails.grantId)
+    {
+        consent.grantId = grantId;
+    }
+
+    const result = { consent };
+    await provider.interactionFinished(req, res, result, { mergeWithLastSubmission: true });
 });
 
 

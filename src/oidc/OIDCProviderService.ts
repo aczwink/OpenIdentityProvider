@@ -20,7 +20,7 @@ import { Injectable } from "acts-util-node";
 import Provider, { Adapter, Configuration } from 'oidc-provider';
 import { ClientsAdapter } from "./ClientsAdapter.js";
 import { MemoryAdapter } from "../MemoryAdapter.js";
-import { allowedOrigins, port } from "../config.js";
+import { allowedOrigins, CONFIG_SIGNING_KEY, port } from "../config.js";
 
 function CreateAdapter(name: string): Adapter
 {
@@ -47,16 +47,40 @@ const oidcConfig: Configuration = {
     },
 
     features: {
-        devInteractions: { enabled: false }
+        devInteractions: { enabled: false },
+
+        resourceIndicators: {
+            enabled: true,
+
+            defaultResource(ctx, client, oneOf)
+            {
+                return "http://localhost:8081";
+            },
+
+            getResourceServerInfo(ctx, resourceIndicator, client)
+            {
+                return {
+                    scope: "TODO",
+                    accessTokenFormat: "jwt",
+                    jwt: {
+                        sign: { alg: 'ES256' },
+                    }
+                };
+            },
+
+            useGrantedResource(ctx, model)
+            {
+                return true;
+            },
+        }
     },
 
     findAccount: function(_, sub)
     {
-        console.log("findAccount", arguments);
         return {
             accountId: sub,
             claims: async function(){
-                console.log(arguments, "findAccount.claims");
+                console.log("TODO", arguments, "findAccount.claims");
                 return {
                     sub: "subble",
                 };
@@ -64,11 +88,15 @@ const oidcConfig: Configuration = {
         };
     },
 
+    jwks: {
+        keys: [CONFIG_SIGNING_KEY]
+    },
+
     renderError: function(ctx, errorOut, error)
     {
         console.log(errorOut, error);
         ctx.res.end("An error occured");
-    }
+    },
 };
 
 @Injectable

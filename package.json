@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "run-dev-server": "nodemon --exec \"npx acts-util-apilib; tsc; cp -r src/views dist/; node dist/main.js\""
+    "run-dev-server": "nodemon --exec \"npx acts-util-apilib; tsc; cp -r src/views dist/; cd dist; node main.js\""
   },
   "keywords": [],
   "author": "Amir Czwink",
