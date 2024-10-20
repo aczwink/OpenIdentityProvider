@@ -15,28 +15,29 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
+import child_process from "child_process";
 import { Injectable } from "acts-util-node";
 
-interface AppRegistration
-{
-    clientId: string;
-    clientSecret: string;
-    redirectURIs: string[];
-}
-
 @Injectable
-export class AppRegistrationsController
+export class ADService
 {
-    public Query(id: string)
+    public async CreateUser(userId: string)
     {
-        const appRegs = [
-            {
-                clientId: "{your application id}",
-                clientSecret: "sequa",
-                redirectURIs: ["http://localhost:8081/oauth2"]
-            }
-        ];
+        await this.Exec(["samba-tool", "user", "add", userId, "--random-password"]);
+    }
 
-        return appRegs.find(x => x.clientId === id);
+    //Private methods
+    private Exec(command: string[])
+    {
+        const line = command.join(" ");
+
+        return new Promise<void>( (resolve, reject) => {
+            child_process.exec(line, error => {
+                if(error)
+                    reject(error);
+                else
+                    resolve();
+            });
+        });
     }
 }

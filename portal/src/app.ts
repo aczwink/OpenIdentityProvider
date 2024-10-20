@@ -15,19 +15,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-import { Injectable } from "acts-util-node";
+import { BootstrapApp } from "acfrontend";
+import { RootComponent } from "./RootComponent";
+import { routes } from "./routing";
 
-@Injectable
-export class UserAccountsController
-{
-    public Query(id: string)
-    {
-        const users = [
-            {
-                accountId: "asdasd",
-            }
-        ];
-
-        return users.find(x => x.accountId === id);
-    }
-}
+BootstrapApp({
+    mountPoint: document.body,
+    rootComponentClass: RootComponent,
+    routes: routes,
+    title: "OpenIdentityProvider Portal",
+    version: "0.1 beta"
+});

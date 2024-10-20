@@ -17,7 +17,7 @@
  * */
 import { GlobalInjector } from "acts-util-node";
 import { Adapter, AdapterPayload } from "oidc-provider";
-import { AppRegistrationsController } from "../data-access/AppRegistrationsController.js";
+import { AppRegistrationsController } from "../data-access/AppRegistrationsController";
 
 export class ClientsAdapter implements Adapter
 {
@@ -31,11 +31,12 @@ export class ClientsAdapter implements Adapter
     public async find(id: string): Promise<void | AdapterPayload | undefined>
     {
         const appRegController = GlobalInjector.Resolve(AppRegistrationsController);
-        const appReg = appRegController.Query(id);
+        const appReg = await appRegController.QueryByExternalId(id);
         if(appReg !== undefined)
         {
             return {
-                client_id: appReg.clientId,
+                client_id: appReg.id,
+                client_name: appReg.displayName,
                 client_secret: appReg.clientSecret,
                 redirect_uris: appReg.redirectURIs,
                 token_endpoint_auth_method: "none",

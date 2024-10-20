@@ -1,3 +1,8 @@
-dist
-node_modules
-package-lock.json
+oidp/.env
+oidp/dist
+oidp/node_modules
+oidp/package-lock.json
+portal/.env
+portal/dist
+portal/node_modules
+portal/package-lock.json

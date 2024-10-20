@@ -15,12 +15,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-
-import { Injectable } from "acts-util-node";
+import express from "express";
+import { GlobalInjector, Injectable } from "acts-util-node";
 import Provider, { Adapter, Configuration } from 'oidc-provider';
-import { ClientsAdapter } from "./ClientsAdapter.js";
-import { MemoryAdapter } from "../MemoryAdapter.js";
-import { allowedOrigins, CONFIG_SIGNING_KEY, port } from "../config.js";
+import { ClientsAdapter } from "./ClientsAdapter";
+import { MemoryAdapter } from "../MemoryAdapter";
+import { allowedOrigins, CONFIG_SIGNING_KEY, port } from "../config";
+import { AppRegistrationsController } from "../data-access/AppRegistrationsController";
+import { ClaimProviderService } from "../services/ClaimProviderService";
 
 function CreateAdapter(name: string): Adapter
 {
@@ -46,6 +48,16 @@ const oidcConfig: Configuration = {
         grant_types: ["authorization_code"]
     },
 
+
+    extraTokenClaims: function(_, token)
+    {
+        if(token.kind === "AccessToken")
+        {
+            const claimProviderService = GlobalInjector.Resolve(ClaimProviderService);
+            return claimProviderService.Provide(token.clientId!, token.accountId);
+        }
+    },
+
     features: {
         devInteractions: { enabled: false },
 
@@ -54,13 +66,14 @@ const oidcConfig: Configuration = {
 
             defaultResource(ctx, client, oneOf)
             {
-                return "http://localhost:8081";
+                return "localhost:3000";
             },
 
-            getResourceServerInfo(ctx, resourceIndicator, client)
+            async getResourceServerInfo(ctx, resourceIndicator, client)
             {
+                const appReg = await GlobalInjector.Resolve(AppRegistrationsController).QueryByExternalId(client.clientId);
                 return {
-                    scope: "TODO",
+                    scope: appReg!.scopes.join(" "),
                     accessTokenFormat: "jwt",
                     jwt: {
                         sign: { alg: 'ES256' },
@@ -70,6 +83,7 @@ const oidcConfig: Configuration = {
 
             useGrantedResource(ctx, model)
             {
+                //TODO: is this still needed?
                 return true;
             },
         }
@@ -80,9 +94,9 @@ const oidcConfig: Configuration = {
         return {
             accountId: sub,
             claims: async function(){
-                console.log("TODO", arguments, "findAccount.claims");
+                console.log("findAccount.claims", arguments);
                 return {
-                    sub: "subble",
+                    sub,
                 };
             },
         };
@@ -94,8 +108,18 @@ const oidcConfig: Configuration = {
 
     renderError: function(ctx, errorOut, error)
     {
-        console.log(errorOut, error);
-        ctx.res.end("An error occured");
+        const app = ctx.res as unknown as express.Express;
+        return app.render('error', {
+            title: errorOut.error,
+            description: errorOut.error_description,
+
+            //TODO: fix this
+            uid: 0,
+            client: {
+                tosUri: "",
+                policyUri: ""
+            }
+          });
     },
 };
 

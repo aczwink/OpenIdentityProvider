@@ -17,9 +17,9 @@
  * */
 import { GlobalInjector } from "acts-util-node";
 import express, { urlencoded } from "express";
-import { OIDCProviderService } from "./OIDCProviderService.js";
+import { OIDCProviderService } from "./OIDCProviderService";
 import { errors } from "oidc-provider";
-import { UserAccountsController } from "../data-access/UserAccountsController.js";
+import { UserAccountsController } from "../data-access/UserAccountsController";
 
 export const interactionsRouter = express.Router();
 
@@ -83,7 +83,7 @@ interactionsRouter.get('/interaction/:uid', setNoCache, async function(req: expr
         {
             return res.render('login', {
                 uid: interactionDetails.uid,
-                title: 'Sign-in',
+                title: 'Sign-into application: ' + client?.clientName,
                 client,
             });
         }
@@ -98,11 +98,11 @@ interactionsRouter.post('/interaction/:uid/login', setNoCache, parseURLEncodedBo
     const interactionDetails = await provider.interactionDetails(req, res);
 
     const userAccountsController = GlobalInjector.Resolve(UserAccountsController);
-    const account = userAccountsController.Query(req.body.login);
+    const account = await userAccountsController.QueryByExternalId(req.body.login);
 
     const result = {
         login: {
-            accountId: account!.accountId,
+            accountId: account!.id,
         },
     };
 

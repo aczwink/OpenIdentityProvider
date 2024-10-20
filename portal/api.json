@@ -1,0 +1,7 @@
+{
+    "type": "api",
+    "source": "../oidp/dist/openapi.json",
+    "destination": "./dist/api.ts",
+    "excludedStatusCodes": [],
+    "header": "interface OptionalRequestData{}"
+}

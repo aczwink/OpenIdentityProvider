@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "run-dev-server": "nodemon --exec \"npx acts-util-apilib; tsc; cp -r src/views dist/; cd dist; node main.js\""
+    "run-dev-server": "nodemon --exec \"npx acts-util-apilib; npx webpack; docker container stop oidp_dev; docker build --network host -t oidp .; docker run --name oidp_dev --rm -v ./dist:/etc/OpenIdentityProvider:ro --network host --env-file ./.env oidp \""
   },
   "keywords": [],
   "author": "Amir Czwink",
@@ -22,6 +22,7 @@
     "@types/ejs": "^3.1.5",
     "@types/oidc-provider": "^8.5.2",
     "nodemon": "^3.1.4",
+    "ts-loader": "^9.5.1",
     "typescript": "^5.5.4"
   }
 }
