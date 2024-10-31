@@ -2,9 +2,11 @@ name: Build docker images
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "cicd" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+    
 
 jobs:
   build-and-push-image:
@@ -16,6 +18,7 @@ jobs:
     #build oidp
     - name: Build oidp
       run: |
+        npm link acts-util-apilib
         npm install
       working-directory: ./oidp
 
