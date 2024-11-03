@@ -1,0 +1,36 @@
+name: Build docker images
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    #build oidp
+    - name: Build oidp
+      run: |
+        npm install
+      working-directory: ./oidp
+
+    #publish images      
+    - name: Log in to the Container registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push backend image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./oidp
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ghcr.io/aczwink/openidentityprovider:latest
