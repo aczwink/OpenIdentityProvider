@@ -20,6 +20,7 @@ import express, { urlencoded } from "express";
 import { OIDCProviderService } from "./OIDCProviderService";
 import { errors } from "oidc-provider";
 import { UserAccountsController } from "../data-access/UserAccountsController";
+import { ScopeEvaluationService } from "../services/ScopeEvaluationService";
 
 export const interactionsRouter = express.Router();
 
@@ -65,12 +66,26 @@ interactionsRouter.get('/interaction/:uid', setNoCache, async function(req: expr
 
     const params = interactionDetails.params as any;
 
-    const client = await provider.Client.find(params.client_id);
+    const client = (await provider.Client.find(params.client_id))!;
     
     switch (interactionDetails.prompt.name)
     {
         case "consent":
         {
+            const accountId = interactionDetails.session?.accountId!;
+            const scope = (interactionDetails.params.scope as string);
+
+            const isValid = await GlobalInjector.Resolve(ScopeEvaluationService).IsScopeRequestValid(client.clientId, accountId, scope);
+            if(!isValid)
+            {
+                const result = {
+                    error: 'access_denied',
+                    error_description: 'Insufficient permissions: scope out of reach for this Account',
+                };
+                await provider.interactionFinished(req, res, result, { mergeWithLastSubmission: true });
+                return;
+            }
+
             return res.render('interaction', {
                 client,
                 uid: interactionDetails.uid,
@@ -83,7 +98,7 @@ interactionsRouter.get('/interaction/:uid', setNoCache, async function(req: expr
         {
             return res.render('login', {
                 uid: interactionDetails.uid,
-                title: 'Sign-into application: ' + client?.clientName,
+                title: 'Sign-into application: ' + client.clientName,
                 client,
             });
         }
@@ -102,7 +117,7 @@ interactionsRouter.post('/interaction/:uid/login', setNoCache, parseURLEncodedBo
 
     const result = {
         login: {
-            accountId: account!.id,
+            accountId: account!.eMailAddress,
         },
     };
 
@@ -136,7 +151,7 @@ interactionsRouter.post('/interaction/:uid/confirm', setNoCache, parseURLEncoded
             clientId: params.client_id as any,
         });
     }
-    
+
     if (details.missingOIDCScope)
     {
         grant.addOIDCScope((details.missingOIDCScope as any).join(' '));

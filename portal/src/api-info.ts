@@ -15,7 +15,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
+import { OpenAPI } from "../../../ACTS-Util/core/dist/main";
+import root from "../../oidp/dist/openapi.json";
 
-import "./api/app-registrations";
-import "./api/usergroups";
-import "./api/users";
+const apiSchemas = root.components.schemas;
+export function APISchemaOf<T>( mapper: (schemas: typeof apiSchemas) => T)
+{
+    return mapper(apiSchemas) as OpenAPI.ObjectSchema;
+}

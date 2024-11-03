@@ -27,41 +27,42 @@ export class ClaimProviderService
     {
     }
 
-    public async Provide(externalAppregistrationId: string, externalUserId: string)
+    public async Provide(externalAppRegistrationId: string, externalUserId: string)
     {
         const userId = await this.userAccountsController.QueryInternalId(externalUserId);
 
-        const variables = await this.claimsController.QueryVariables(externalAppregistrationId);
+        const variables = await this.claimsController.QueryVariables(externalAppRegistrationId);
         const variablesWithValues = await variables.Values().Map(this.FetchClaimValues.bind(this, userId!)).PromiseAll();
 
         return variablesWithValues.Values().NotUndefined().ToDictionary(kv => kv.key, kv => kv.value);
     }
 
     //Private methods
-    private async FetchClaimValues(userId: number, variable: ClaimVariable)
+    private ConstructClaimResult(variable: ClaimVariable, grantedValues: string[])
     {
-        const possibleValues = await this.claimsController.QueryValues(variable.id);
         switch(variable.claimType)
         {
             case "string[]":
-            {
-                const values = [];
-                for (const v of possibleValues)
-                {
-                    if(await this.groupsController.IsUserMemberOfGroup(userId, v.groupId))
-                    {
-                        values.push(v.value);
-                    }
-                }
-
-                if(values.length > 0)
-                {
-                    return {
-                        key: variable.claimName,
-                        value: values
-                    };
-                }
-            }
+                return grantedValues;
+            case "string-list-space-separated":
+                return grantedValues.join(" ");
         }
+    }
+
+    private async FetchClaimValues(userId: number, variable: ClaimVariable)
+    {
+        const possibleValues = await this.claimsController.QueryValues(variable.id);
+        const grantedValues = [];
+        for (const v of possibleValues)
+        {
+            if(await this.groupsController.IsUserMemberOfGroup(userId, v.groupId))
+                grantedValues.push(v.value);
+        }
+        if(grantedValues.length === 0)
+            return undefined;
+        return {
+            key: variable.claimName,
+            value: this.ConstructClaimResult(variable, grantedValues)
+        };
     }
 }

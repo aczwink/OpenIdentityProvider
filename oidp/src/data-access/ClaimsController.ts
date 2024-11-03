@@ -18,17 +18,24 @@
 import { Injectable } from "acts-util-node";
 import { DBConnectionsManager } from "./DBConnectionsManager";
 
-interface ClaimValue
+export interface ClaimValue
 {
+    /**
+     * @format usergroup-id
+     */
     groupId: number;
     value: string;
 }
 
-export interface ClaimVariable
+export interface ClaimVariableProperties
+{
+    claimName: string;
+    claimType: "string[]" | "string-list-space-separated";
+}
+
+export interface ClaimVariable extends ClaimVariableProperties
 {
     id: number;
-    claimName: string;
-    claimType: "string[]";
 }
 
 @Injectable
@@ -39,6 +46,31 @@ export class ClaimsController
     }
 
     //Public methods
+    public async AddValue(claimId: number, value: ClaimValue)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.InsertRow("appregistrations_claims_values", {
+            claimId,
+            value: value.value,
+            groupId: value.groupId
+        });
+    }
+
+    public async AddVariable(appRegistrationId: number, data: ClaimVariableProperties)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.InsertRow("appregistrations_claims", {
+            appRegistrationId,
+            ...data
+        });
+    }
+
+    public async DeleteValue(claimId: number, claimValue: ClaimValue)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.DeleteRows("appregistrations_claims_values", "claimId = ? AND value = ? AND groupId = ?", claimId, claimValue.value, claimValue.groupId);
+    }
+
     public async QueryValues(claimId: number)
     {
         const query = `
@@ -51,17 +83,17 @@ export class ClaimsController
         return rows;
     }
     
-    public async QueryVariables(externalAppregistrationId: string)
+    public async QueryVariables(externalAppRegistrationId: string)
     {
         const query = `
         SELECT ac.*
         FROM appregistrations_claims ac
         INNER JOIN appregistrations a
-            ON ac.appregistrationId = a.internalId
+            ON ac.appRegistrationId = a.internalId
         WHERE a.externalId = ?
         `;
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const rows = await conn.Select<ClaimVariable>(query, externalAppregistrationId);
+        const rows = await conn.Select<ClaimVariable>(query, externalAppRegistrationId);
         return rows;
     }
 }

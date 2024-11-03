@@ -29,7 +29,6 @@ interface AppRegistrationOverviewData
 export interface AppRegistrationProperties
 {
     displayName: string;
-    scopes: string[];
     redirectURIs: string[];
 }
 
@@ -55,11 +54,16 @@ export class AppRegistrationsController
             externalId,
             secret: crypto.randomBytes(64).toString("hex"),
             displayName: data.displayName,
-            scopes: data.scopes.join(" "),
             redirectURIs: JSON.stringify(data.redirectURIs)
         });
 
         return externalId as string;
+    }
+
+    public async DeleteByExternalId(externalId: string)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.DeleteRows("appregistrations", "externalId = ?", externalId);
     }
 
     public async QueryByExternalId(externalId: string)
@@ -74,9 +78,18 @@ export class AppRegistrationsController
             id: row.externalId,
             clientSecret: row.secret,
             displayName: row.displayName,
-            scopes: row.scopes.split(" "),
             redirectURIs: JSON.parse(row.redirectURIs),
         });
+    }
+
+    public async QueryInternalId(externalId: string)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const row = await conn.SelectOne("SELECT internalId FROM appregistrations WHERE externalId = ?", externalId);
+
+        if(row === undefined)
+            return undefined;
+        return row.internalId as number;
     }
 
     public async QueryAll()
