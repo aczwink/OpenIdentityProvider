@@ -59,8 +59,9 @@ jobs:
     #build oidp    
     - name: Build oidp
       run: |
-        npm link acts-util-apilib
+        npm link acts-util-apilib acts-util-core
         npm install
+        npm run build
       working-directory: ./oidp
 
     #publish images      
