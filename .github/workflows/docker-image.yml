@@ -16,6 +16,8 @@ jobs:
         node-version: [18.x]
 
     steps:
+    - uses: actions/checkout@v4
+    
     #setup build tools
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
@@ -54,9 +56,7 @@ jobs:
         npm link
       working-directory: ./actsutil/apilib
 
-    #build oidp
-    - uses: actions/checkout@v4
-    
+    #build oidp    
     - name: Build oidp
       run: |
         npm link acts-util-apilib
