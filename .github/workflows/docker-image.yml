@@ -100,7 +100,7 @@ jobs:
     #build portal
     - name: Building OIDP portal
       run: |
-        npm link acfrontend acfrontendex
+        npm link acfrontend acfrontendex acts-util-core
         npm install
         npm run generate-api
         npm run build
