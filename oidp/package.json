@@ -5,7 +5,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "run-dev-server": "nodemon --exec \"npx acts-util-apilib; npx webpack; docker container stop oidp_dev; docker build --network host -t oidp .; docker run --name oidp_dev --rm -v ./dist:/etc/OpenIdentityProvider:ro --network host --env-file ./.env oidp \""
+    "build": "npx acts-util-apilib; npx webpack",
+    "run-dev-server": "nodemon --exec \"npm run build; ./run_dev_container.sh\"",
+    "run-local": "cd dist; export $(cat ../.env | xargs) && node bundle.js"
   },
   "keywords": [],
   "author": "Amir Czwink",

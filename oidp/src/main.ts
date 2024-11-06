@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-import child_process from "child_process";
 import crypto from "crypto";
 import express from "express";
 import fs from "fs";
@@ -28,11 +27,11 @@ import { allowedOrigins, CONFIG_SIGNING_KEY, port } from "./config";
 import { OIDCProviderService } from "./oidc/OIDCProviderService";
 import { OpenAPI } from 'acts-util-core';
 import { APIRegistry } from 'acts-util-apilib';
+import { ADService } from "./services/ADService";
 
 async function BootstrapServer()
 {
-    //start samba AD early
-    child_process.spawn("/init.sh");
+    GlobalInjector.Resolve(ADService).Initialize(); //start samba AD early
 
     const requestHandlerChain = Factory.CreateRequestHandlerChain();
     requestHandlerChain.AddCORSHandler(allowedOrigins);
@@ -45,7 +44,8 @@ async function BootstrapServer()
                 format: 'jwk'
             }),
             "http://localhost:3000", //TODO WHY HTTP AND NOT HTTPS?
-            false)
+            false
+        )
     );
 
     await import("./__http_registry");
@@ -65,8 +65,8 @@ async function BootstrapServer()
     requestHandlerChain.AddThirdPartyHandler(GlobalInjector.Resolve(OIDCProviderService).provider.callback());
 
     const server = https.createServer({
-        key: fs.readFileSync("/etc/OpenIdentityProvider/private.key"),
-        cert: fs.readFileSync("/etc/OpenIdentityProvider/public.crt")
+        key: fs.readFileSync("/srv/OpenIdentityProvider/private.key"),
+        cert: fs.readFileSync("/srv/OpenIdentityProvider/public.crt")
     }, requestHandlerChain.requestListener);
 
     server.listen(port, () => {

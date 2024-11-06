@@ -25,4 +25,11 @@ export const CONFIG_DB = {
     user: process.env.OIDP_DBUSER!,
     password: process.env.OIDP_DBPW!,
 };
-export const CONFIG_SIGNING_KEY = JSON.parse(fs.readFileSync("/etc/OpenIdentityProvider/signing_key.json", "utf-8"));
+
+export const CONFIG_DOMAIN = {
+    dnsForwarderIP: process.env.OIDP_DNSFORWARDERIP!,
+    domain: process.env.OIDP_DOMAIN!,
+    dcIP_Address: process.env.OIDP_DCIP
+};
+
+export const CONFIG_SIGNING_KEY = JSON.parse(fs.readFileSync("/srv/OpenIdentityProvider/signing_key.json", "utf-8"));

@@ -17,13 +17,44 @@
  * */
 import child_process from "child_process";
 import { Injectable } from "acts-util-node";
+import { UserAccountsController } from "../data-access/UserAccountsController";
+import { CONFIG_DOMAIN } from "../config";
 
 @Injectable
 export class ADService
 {
-    public async CreateUser(userId: string)
+    constructor(private userAccountsController: UserAccountsController)
     {
-        await this.Exec(["samba-tool", "user", "add", userId, "--random-password"]);
+    }
+
+    public async CreateUser(userId: number)
+    {
+        const sAMAccountName = await this.MapTo_sAMAccountName(userId);
+        await this.Exec(["samba-tool", "user", "add", sAMAccountName, "--random-password"]);
+    }
+
+    public async DeleteUser(userId: number)
+    {
+        const sAMAccountName = await this.MapTo_sAMAccountName(userId);
+        await this.Exec(["samba-tool", "user", "delete", sAMAccountName]);
+    }
+
+    public Initialize()
+    {
+        const adInitProcess = child_process.spawn("/init.sh", {
+            env: {
+                DNSFORWARDER: CONFIG_DOMAIN.dnsForwarderIP,
+                DOMAIN: CONFIG_DOMAIN.domain.toUpperCase(),
+                DOMAIN_DC: CONFIG_DOMAIN.domain.split(".").map(x => "dc=" + x).join(","),
+                DOMAIN_EMAIL: CONFIG_DOMAIN.domain,
+                DOMAINPASS: "AdminPW1234!",
+                HOSTIP: CONFIG_DOMAIN.dcIP_Address,
+            },
+        });
+        adInitProcess.stderr.setEncoding("utf-8");
+        adInitProcess.stdout.setEncoding("utf-8");
+        adInitProcess.stderr.on("data", console.error);
+        adInitProcess.stdout.on("data", console.error);
     }
 
     //Private methods
@@ -39,5 +70,11 @@ export class ADService
                     resolve();
             });
         });
+    }
+
+    private async MapTo_sAMAccountName(userId: number)
+    {
+        const account = await this.userAccountsController.Query(userId);
+        return account.givenName;
     }
 }

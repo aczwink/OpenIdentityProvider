@@ -15,14 +15,27 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-import { BootstrapApp } from "acfrontend";
-import { RootComponent } from "./RootComponent";
-import { routes } from "./routing";
+import { BootstrapApp } from "acfrontendex";
+import { usersRoute } from "./routes/users";
+import { userGroupsRoutes } from "./routes/groups";
+import { appRegistrationsRoutes } from "./routes/app-registrations";
+import { RegisterCustomFormats } from "./presentation/custom-formats";
+
+RegisterCustomFormats();
 
 BootstrapApp({
+    features: {
+        oAuth2: {
+            authorizeEndpoint: process.env.OIDP_AUTH_ENDPOINT!,
+            clientId: process.env.OIDP_CLIENTID!,
+            flow: "authorizationCode",
+            redirectURI: process.env.OIDP_REDIRECTURI!,
+            tokenEndpoint: process.env.OIDP_TOKEN_ENDPOINT!
+        },
+        OIDC: true
+    },
     mountPoint: document.body,
-    rootComponentClass: RootComponent,
-    routes: routes,
+    routes: [appRegistrationsRoutes, userGroupsRoutes, usersRoute],
     title: "OpenIdentityProvider Portal",
     version: "0.1 beta"
 });

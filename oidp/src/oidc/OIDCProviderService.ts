@@ -21,8 +21,9 @@ import Provider, { Adapter, Configuration } from 'oidc-provider';
 import { ClientsAdapter } from "./ClientsAdapter";
 import { MemoryAdapter } from "../MemoryAdapter";
 import { allowedOrigins, CONFIG_SIGNING_KEY, port } from "../config";
-import { AppRegistrationsController } from "../data-access/AppRegistrationsController";
 import { ClaimProviderService } from "../services/ClaimProviderService";
+import { ScopeEvaluationService } from "../services/ScopeEvaluationService";
+import { UserAccountsController } from "../data-access/UserAccountsController";
 
 function CreateAdapter(name: string): Adapter
 {
@@ -39,6 +40,12 @@ function CreateAdapter(name: string): Adapter
 const oidcConfig: Configuration = {
     adapter: CreateAdapter,
 
+    claims: {
+        email: ["email"],
+        openid: ["sub"],
+        profile: ["given_name", "name"]
+    },
+
     clientBasedCORS(ctx, origin, client)
     {
         return allowedOrigins.Contains(origin);
@@ -49,12 +56,14 @@ const oidcConfig: Configuration = {
     },
 
 
-    extraTokenClaims: function(_, token)
+    extraTokenClaims: async function(_, token)
     {
         if(token.kind === "AccessToken")
         {
             const claimProviderService = GlobalInjector.Resolve(ClaimProviderService);
-            return claimProviderService.Provide(token.clientId!, token.accountId);
+            const provided = await claimProviderService.Provide(token.clientId!, token.accountId);
+            delete provided["scope"];
+            return provided;
         }
     },
 
@@ -71,9 +80,9 @@ const oidcConfig: Configuration = {
 
             async getResourceServerInfo(ctx, resourceIndicator, client)
             {
-                const appReg = await GlobalInjector.Resolve(AppRegistrationsController).QueryByExternalId(client.clientId);
+                const scopes = await GlobalInjector.Resolve(ScopeEvaluationService).ResolveAvailableScopeValues(client.clientId);
                 return {
-                    scope: appReg!.scopes.join(" "),
+                    scope: scopes,
                     accessTokenFormat: "jwt",
                     jwt: {
                         sign: { alg: 'ES256' },
@@ -83,7 +92,7 @@ const oidcConfig: Configuration = {
 
             useGrantedResource(ctx, model)
             {
-                //TODO: is this still needed?
+                //TODO: is this still needed? no, it should be removed and clients should ask for a specific resource server instead
                 return true;
             },
         }
@@ -93,10 +102,15 @@ const oidcConfig: Configuration = {
     {
         return {
             accountId: sub,
-            claims: async function(){
-                console.log("findAccount.claims", arguments);
+            claims: async function()
+            {
+                const user = await GlobalInjector.Resolve(UserAccountsController).QueryByExternalId(sub);
                 return {
                     sub,
+
+                    email: user!.eMailAddress,
+                    given_name: user!.givenName,
+                    name: user!.givenName, //TODO: UPN,
                 };
             },
         };
@@ -108,6 +122,7 @@ const oidcConfig: Configuration = {
 
     renderError: function(ctx, errorOut, error)
     {
+        console.error(errorOut, error);
         const app = ctx.res as unknown as express.Express;
         return app.render('error', {
             title: errorOut.error,

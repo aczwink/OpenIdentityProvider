@@ -18,6 +18,16 @@
 import { Injectable } from "acts-util-node";
 import { DBConnectionsManager } from "./DBConnectionsManager";
 
+export interface UserGroupProperties
+{
+    name: string;
+}
+
+interface UserGroup extends UserGroupProperties
+{
+    id: number;
+}
+
 @Injectable
 export class GroupsController
 {
@@ -26,11 +36,53 @@ export class GroupsController
     }
 
     //Public methods
+    public async AddMember(userGroupId: number, userId: number)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.InsertRow("groups_members", {
+            groupId: userGroupId,
+            userId
+        });
+    }
+
+    public async Create(props: UserGroupProperties)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const result = await conn.InsertRow("groups", props);
+        return result.insertId;
+    }
+
+    public async Delete(userGroupId: number)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.DeleteRows("groups", "id = ?", userGroupId);
+    }
+
     public async IsUserMemberOfGroup(userId: number, groupId: number)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
         const row = await conn.SelectOne("SELECT TRUE FROM groups_members WHERE groupId = ? AND userId = ?", groupId, userId);
 
         return row !== undefined;
+    }
+
+    public async Query(userGroupId: number)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const row = await conn.SelectOne<UserGroup>("SELECT id, name FROM groups WHERE id = ?", userGroupId);
+        return row;
+    }
+
+    public async QueryAll()
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const rows = await conn.Select<UserGroup>("SELECT id, name FROM groups");
+        return rows;
+    }
+
+    public async RemoveMember(userGroupId: number, userId: number)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.DeleteRows("groups_members", "groupId = ? AND userId = ?", userGroupId, userId);
     }
 }
