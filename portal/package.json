@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "acfrontend": "*",
-    "acfrontendex": "*"
+    "acfrontendex": "*",
+    "acts-util-core": "*"
   }
 }
