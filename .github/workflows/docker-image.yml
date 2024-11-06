@@ -64,6 +64,22 @@ jobs:
         npm run build
         npm link
       working-directory: ./actsutil/apilib
+      
+    #build acfrontend
+    - name: Checkout ACFrontEnd repo
+      uses: actions/checkout@v4
+      with:
+        repository: aczwink/ACFrontEnd
+        path: acfrontend
+
+    - name: Building acfrontend
+      run: |
+        npm link acts-util-core
+        npm install
+        npm run compile
+        npm run build
+        npm link
+      working-directory: ./acfrontend
 
     #build oidp    
     - name: Build oidp
@@ -76,6 +92,7 @@ jobs:
     #build portal
     - name: Building OIDP portal
       run: |
+        npm link acfrontend
         npm install
         npm run generate-api
         npm run build
