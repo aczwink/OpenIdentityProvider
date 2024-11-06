@@ -81,6 +81,14 @@ jobs:
         npm link
       working-directory: ./acfrontend
 
+    - name: Building acfrontendex
+      run: |
+        npm link acfrontend
+        npm install
+        npm run compile
+        npm link
+      working-directory: ./acfrontend/extended
+
     #build oidp    
     - name: Build oidp
       run: |
@@ -92,7 +100,7 @@ jobs:
     #build portal
     - name: Building OIDP portal
       run: |
-        npm link acfrontend
+        npm link acfrontend acfrontendex
         npm install
         npm run generate-api
         npm run build
