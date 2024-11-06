@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "generate-api": "npx acts-util-apilib",
-    "start-dev": "webpack serve --open"
+    "start-dev": "webpack serve --open",
+    "build": "npx webpack"
   },
   "keywords": [],
   "author": "Amir Czwink",
