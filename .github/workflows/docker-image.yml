@@ -59,6 +59,7 @@ jobs:
     
     - name: Build oidp
       run: |
+        npm link acts-util-apilib
         npm install
       working-directory: ./oidp
 
