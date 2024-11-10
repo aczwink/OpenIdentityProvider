@@ -19,8 +19,11 @@ import { GlobalInjector } from "acts-util-node";
 import express, { urlencoded } from "express";
 import { OIDCProviderService } from "./OIDCProviderService";
 import { errors } from "oidc-provider";
-import { UserAccountsController } from "../data-access/UserAccountsController";
 import { ScopeEvaluationService } from "../services/ScopeEvaluationService";
+import { OIDCInteractionsManager } from "./OIDCInteractionsManager";
+
+const oidcProviderService = GlobalInjector.Resolve(OIDCProviderService);
+const interactionsManager = GlobalInjector.Resolve(OIDCInteractionsManager);
 
 export const interactionsRouter = express.Router();
 
@@ -109,19 +112,9 @@ interactionsRouter.get('/interaction/:uid', setNoCache, async function(req: expr
 
 interactionsRouter.post('/interaction/:uid/login', setNoCache, parseURLEncodedBody, async (req, res, next) =>
 {
-    const provider = GlobalInjector.Resolve(OIDCProviderService).provider;
-    const interactionDetails = await provider.interactionDetails(req, res);
-
-    const userAccountsController = GlobalInjector.Resolve(UserAccountsController);
-    const account = await userAccountsController.QueryByExternalId(req.body.login);
-
-    const result = {
-        login: {
-            accountId: account!.eMailAddress,
-        },
-    };
-
-    await provider.interactionFinished(req, res, result, { mergeWithLastSubmission: false });
+    const interactionDetails = await oidcProviderService.provider.interactionDetails(req, res);
+    const result = await interactionsManager.HandleAuth(interactionDetails, req.body.login, req.body.password);
+    await oidcProviderService.provider.interactionFinished(req, res, result, { mergeWithLastSubmission: false });
 });
 
 interactionsRouter.post('/interaction/:uid/confirm', setNoCache, parseURLEncodedBody, async (req, res, next) =>

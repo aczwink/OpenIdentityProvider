@@ -15,11 +15,16 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
+import { Injectable } from "acts-util-node";
 
-export const OIDC_API_SCHEME = "oidc";
-export const SCOPE_ADMIN = "admin";
-
-export interface AccessToken
+@Injectable
+export class PasswordValidationService
 {
-    sub: string;
+    public Validate(password: string)
+    {
+        if(password.includes(" "))
+            return "contains_whitespace";
+        if(password.length < 8) //samba AD requires at least 7 characters
+            return "too_short";
+    }
 }

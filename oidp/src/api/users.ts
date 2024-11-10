@@ -19,13 +19,14 @@
 import { APIController, Body, Delete, Get, NotFound, Path, Post, Security } from "acts-util-apilib";
 import { UserAccountOverviewData, UserAccountsController } from "../data-access/UserAccountsController";
 import { OIDC_API_SCHEME, SCOPE_ADMIN } from "../api_security";
-import { ADService } from "../services/ADService";
+import { ActiveDirectoryService } from "../services/ActiveDirectoryService";
+import { UsersManager } from "../services/UsersManager";
 
 @APIController("users")
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api_
 {
-    constructor(private userAccountsController: UserAccountsController, private adService: ADService)
+    constructor(private userAccountsController: UserAccountsController, private adService: ActiveDirectoryService, private usersManager: UsersManager)
     {
     }
 
@@ -34,8 +35,7 @@ class _api_
         @Body data: UserAccountOverviewData
     )
     {
-        const userId = await this.userAccountsController.Create(data);
-        await this.adService.CreateUser(userId);
+        await this.usersManager.CreateUser(data);
     }
 
     @Get()
@@ -49,7 +49,7 @@ class _api_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api2_
 {
-    constructor(private userAccountsController: UserAccountsController, private adService: ADService)
+    constructor(private userAccountsController: UserAccountsController, private adService: ActiveDirectoryService)
     {
     }
 

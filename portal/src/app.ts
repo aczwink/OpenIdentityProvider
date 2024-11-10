@@ -20,6 +20,12 @@ import { usersRoute } from "./routes/users";
 import { userGroupsRoutes } from "./routes/groups";
 import { appRegistrationsRoutes } from "./routes/app-registrations";
 import { RegisterCustomFormats } from "./presentation/custom-formats";
+import { devicesRoute } from "./routes/devices";
+
+import openAPIRoot from "../../oidp/dist/openapi.json";
+import { OpenAPI } from "../../../ACTS-Util/core/dist/main";
+import { dnsRoute } from "./routes/dns";
+import { changeUserPassword } from "./routes/own-user";
 
 RegisterCustomFormats();
 
@@ -32,10 +38,20 @@ BootstrapApp({
             redirectURI: process.env.OIDP_REDIRECTURI!,
             tokenEndpoint: process.env.OIDP_TOKEN_ENDPOINT!
         },
-        OIDC: true
+
+        OIDC: true,
+
+        openAPI: openAPIRoot as OpenAPI.Root,
+    },
+    layout: {
+        navbar: [
+            [appRegistrationsRoutes, devicesRoute, userGroupsRoutes, usersRoute],
+            [dnsRoute]
+        ],
+        user: [changeUserPassword]
     },
     mountPoint: document.body,
-    routes: [appRegistrationsRoutes, userGroupsRoutes, usersRoute],
+    routes: [appRegistrationsRoutes, changeUserPassword, devicesRoute, userGroupsRoutes, usersRoute, dnsRoute],
     title: "OpenIdentityProvider Portal",
     version: "0.1 beta"
 });

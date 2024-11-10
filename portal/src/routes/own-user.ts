@@ -16,10 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
-export const OIDC_API_SCHEME = "oidc";
-export const SCOPE_ADMIN = "admin";
+import { RouteSetup } from "acfrontendex";
+import { ChangeUserPasswordDTO } from "../../dist/api";
+import { APISchemaOf } from "../api-info";
+import { Use } from "acfrontend";
+import { APIService } from "../services/APIService";
 
-export interface AccessToken
-{
-    sub: string;
-}
+export const changeUserPassword: RouteSetup<ChangeUserPasswordDTO> = {
+    content: {
+        type: "create",
+        call: (_, data) => Use(APIService).ownuser.put(data),
+        schema: APISchemaOf(x => x.ChangeUserPasswordDTO)
+    },
+    displayText: "Change password",
+    icon: "key",
+    routingKey: "changepw",
+};

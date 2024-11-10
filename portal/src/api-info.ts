@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
+import { APIResponse } from "acfrontend";
 import { OpenAPI } from "../../../ACTS-Util/core/dist/main";
 import root from "../../oidp/dist/openapi.json";
 
@@ -22,4 +23,16 @@ const apiSchemas = root.components.schemas;
 export function APISchemaOf<T>( mapper: (schemas: typeof apiSchemas) => T)
 {
     return mapper(apiSchemas) as OpenAPI.ObjectSchema;
+}
+
+export async function APIMap<T, U>(request: Promise<APIResponse<T[]>>, mapper: (source: T) => U): Promise<APIResponse<U[]>>
+{
+    const response = await request;
+    if(response.data === undefined)
+        return response as any;
+    return {
+        rawBody: response.rawBody,
+        statusCode: response.statusCode,
+        data: response.data.map(mapper)
+    };
 }
