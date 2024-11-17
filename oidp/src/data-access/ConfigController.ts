@@ -26,6 +26,12 @@ export class ConfigController
     }
 
     //Public methods
+    public async Delete(configKey: string)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.DeleteRows("config", "configKey = ?", configKey);
+    }
+
     public async Query(key: string)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
@@ -33,7 +39,7 @@ export class ConfigController
         return row?.value as string | undefined;
     }
 
-    public async Set(configKey: string, value: string)
+    public async Set(configKey: string, value: number | string)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
         const result = await conn.UpdateRows("config", { value }, "configKey = ?", configKey);

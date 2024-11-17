@@ -23,6 +23,15 @@ import { UserAccountsController } from "../data-access/UserAccountsController";
 import { CONFIG_DOMAIN } from "../config";
 import { DNSRecord } from "../data-access/DNSController";
 import { ConfigController } from "../data-access/ConfigController";
+import { Of } from "acts-util-core";
+import { GroupsController } from "../data-access/GroupsController";
+
+export interface ActiveDirectoryUserNames
+{
+    netBiosName: string;
+    sAMAccountName: string;
+    userPrincipalName: string;
+}
 
 interface ComputerProperties
 {
@@ -35,24 +44,59 @@ interface ComputerProperties
 const admin_sAMAccountName = "administrator";
 const initialAdminPW = "AdminPW1234!";
 
+//GPO documentation for samba: https://wiki.samba.org/index.php/Group_Policy
+
 @Injectable
 export class ActiveDirectoryService
 {
-    constructor(private userAccountsController: UserAccountsController, private configController: ConfigController)
+    constructor(private userAccountsController: UserAccountsController, private configController: ConfigController, private groupsController: GroupsController)
     {
     }
 
     //Public methods
+    public async AddGroupToDomainAdmins(userGroupId: number)
+    {
+        const group_sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
+
+        await this.Exec(["samba-tool", "group", "addmembers", "Domain Admins", group_sAMAccountName]);
+    }
+
+    public async AddMemberToGroup(userGroupId: number, userId: number)
+    {
+        const group_sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
+        const user_sAMAccountName = await this.MapToUser_sAMAccountName(userId);
+
+        await this.Exec(["samba-tool", "group", "addmembers", group_sAMAccountName, user_sAMAccountName]);
+    }
+
     public async CreateDNSRecord(record: DNSRecord)
     {
         const domainName = this.GetDomainControllerDomainName();
         await this.ExecWithLogin(["samba-tool", "dns", "add", domainName, CONFIG_DOMAIN.domain, record.label, record.recordType, record.value]);
     }
 
+    public async CreateGroup(userGroupId: number)
+    {
+        const sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
+
+        await this.Exec([
+            "samba-tool", "group", "add",
+            sAMAccountName,
+        ]);
+    }
+
     public async CreateUser(userId: number)
     {
-        const sAMAccountName = await this.MapTo_sAMAccountName(userId);
-        await this.Exec(["samba-tool", "user", "add", sAMAccountName, "--random-password"]);
+        const sAMAccountName = await this.MapToUser_sAMAccountName(userId);
+        const account = await this.userAccountsController.Query(userId);
+
+        await this.Exec([
+            "samba-tool", "user", "add",
+            sAMAccountName,
+            "--given-name", account.givenName,
+            "--mail-address", account.eMailAddress,
+            "--random-password"
+        ]);
     }
 
     public async DeleteDNSRecord(record: DNSRecord)
@@ -61,10 +105,31 @@ export class ActiveDirectoryService
         await this.ExecWithLogin(["samba-tool", "dns", "delete", domainName, CONFIG_DOMAIN.domain, record.label, record.recordType, record.value]);
     }
 
+    public async DeleteGroup(userGroupId: number)
+    {
+        const sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
+
+        await this.Exec([
+            "samba-tool", "group", "delete",
+            sAMAccountName,
+        ]);
+    }
+
     public async DeleteUser(userId: number)
     {
-        const sAMAccountName = await this.MapTo_sAMAccountName(userId);
+        const sAMAccountName = await this.MapToUser_sAMAccountName(userId);
         await this.Exec(["samba-tool", "user", "delete", sAMAccountName]);
+    }
+
+    public async GetUserNames(userId: number)
+    {
+        const sAMAccountName = await this.MapToUser_sAMAccountName(userId);
+
+        return Of<ActiveDirectoryUserNames>({
+            netBiosName: CONFIG_DOMAIN.domain.split(".")[0].toUpperCase() + "\\" + sAMAccountName,
+            sAMAccountName,
+            userPrincipalName: sAMAccountName + "@" + CONFIG_DOMAIN.domain
+        });
     }
 
     public Initialize()
@@ -109,16 +174,37 @@ export class ActiveDirectoryService
         return dict as unknown as ComputerProperties;
     }
 
+    public async RemoveGroupFromDomainAdmins(userGroupId: number)
+    {
+        const group_sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
+
+        await this.Exec(["samba-tool", "group", "removemembers", "Domain Admins", group_sAMAccountName]);
+    }
+
+    public async RemoveMemberFromGroup(userGroupId: number, userId: number)
+    {
+        const group_sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
+        const user_sAMAccountName = await this.MapToUser_sAMAccountName(userId);
+
+        await this.Exec(["samba-tool", "group", "removemembers", group_sAMAccountName, user_sAMAccountName]);
+    }
+
     public async SetUserPassword(userId: number, newPassword: string)
     {
-        const sAMAccountName = await this.MapTo_sAMAccountName(userId);
+        const sAMAccountName = await this.MapToUser_sAMAccountName(userId);
         await this.SetUserPasswordInternal(sAMAccountName, newPassword);
     }
 
     //Private methods
+    private EscapeCommandArg(arg: string)
+    {
+        if(arg.includes(' '))
+            return '"' + arg + '"';
+        return arg;
+    }
     private Exec(command: string[])
     {
-        const line = command.join(" ");
+        const line = command.map(this.EscapeCommandArg.bind(this)).join(" ");
 
         return new Promise<string>( (resolve, reject) => {
             child_process.exec(line, (error, stdout) => {
@@ -179,12 +265,31 @@ export class ActiveDirectoryService
         return os.hostname() + "." + CONFIG_DOMAIN.domain;
     }
 
-    private async MapTo_sAMAccountName(userId: number)
+    private GetUserNamingStrategy(): "firstName"
     {
-        const account = await this.userAccountsController.Query(userId);
-        return account.givenName;
+        return "firstName";
     }
 
+    private async MapToGroup_sAMAccountName(userGroupId: number)
+    {
+        const group = await this.groupsController.Query(userGroupId);
+        const sAMAccountName = group!.name;
+        return sAMAccountName;
+    }
+
+    private async MapToUser_sAMAccountName(userId: number)
+    {
+        const account = await this.userAccountsController.Query(userId);
+        switch(this.GetUserNamingStrategy())
+        {
+            case "firstName":
+                return account.givenName;
+        }
+    }
+
+    /**
+     * Be aware that calling this, automatically enables a user!
+     */
     private async SetUserPasswordInternal(sAMAccountName: string, newPassword: string)
     {
         //there is currently no better option that this. The stdin method does not work reliably

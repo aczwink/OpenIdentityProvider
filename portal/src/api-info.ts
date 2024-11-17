@@ -20,9 +20,9 @@ import { OpenAPI } from "../../../ACTS-Util/core/dist/main";
 import root from "../../oidp/dist/openapi.json";
 
 const apiSchemas = root.components.schemas;
-export function APISchemaOf<T>( mapper: (schemas: typeof apiSchemas) => T)
+export function OpenAPISchema<T>(schemaName: keyof typeof apiSchemas)
 {
-    return mapper(apiSchemas) as OpenAPI.ObjectSchema;
+    return apiSchemas[schemaName] as OpenAPI.ObjectSchema;
 }
 
 export async function APIMap<T, U>(request: Promise<APIResponse<T[]>>, mapper: (source: T) => U): Promise<APIResponse<U[]>>

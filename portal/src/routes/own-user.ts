@@ -18,15 +18,15 @@
 
 import { RouteSetup } from "acfrontendex";
 import { ChangeUserPasswordDTO } from "../../dist/api";
-import { APISchemaOf } from "../api-info";
 import { Use } from "acfrontend";
 import { APIService } from "../services/APIService";
+import { OpenAPISchema } from "../api-info";
 
-export const changeUserPassword: RouteSetup<ChangeUserPasswordDTO> = {
+export const changeUserPassword: RouteSetup<{}, ChangeUserPasswordDTO> = {
     content: {
         type: "create",
         call: (_, data) => Use(APIService).ownuser.put(data),
-        schema: APISchemaOf(x => x.ChangeUserPasswordDTO)
+        schema: OpenAPISchema("ChangeUserPasswordDTO")
     },
     displayText: "Change password",
     icon: "key",

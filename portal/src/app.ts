@@ -26,6 +26,7 @@ import openAPIRoot from "../../oidp/dist/openapi.json";
 import { OpenAPI } from "../../../ACTS-Util/core/dist/main";
 import { dnsRoute } from "./routes/dns";
 import { changeUserPassword } from "./routes/own-user";
+import { domainRoute } from "./routes/domain";
 
 RegisterCustomFormats();
 
@@ -46,12 +47,11 @@ BootstrapApp({
     layout: {
         navbar: [
             [appRegistrationsRoutes, devicesRoute, userGroupsRoutes, usersRoute],
-            [dnsRoute]
+            [dnsRoute, domainRoute]
         ],
         user: [changeUserPassword]
     },
     mountPoint: document.body,
-    routes: [appRegistrationsRoutes, changeUserPassword, devicesRoute, userGroupsRoutes, usersRoute, dnsRoute],
     title: "OpenIdentityProvider Portal",
     version: "0.1 beta"
 });

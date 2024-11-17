@@ -18,32 +18,27 @@
 
 import { RouteSetup } from "acfrontendex";
 import { APIService } from "../services/APIService";
-import { APIMap, OpenAPISchema } from "../api-info";
+import { ActiveDirectoyDomainAdminData } from "../../dist/api";
+import { OpenAPISchema } from "../api-info";
 import { Use } from "acfrontend";
-import { ComputerProperties } from "../../dist/api";
 
-const deviceRoute: RouteSetup<{ deviceName: string }, ComputerProperties> = {
+export const domainRoute: RouteSetup<{}, ActiveDirectoyDomainAdminData> = {
     content: {
         type: "object",
-        actions: [],
-        formTitle: ids => ids.deviceName,
-        requestObject: ids => Use(APIService).devices._any_.get(ids.deviceName),
-        schema: OpenAPISchema("ComputerProperties")
+        actions: [
+            {
+                type: "edit",
+                requestObject: _ => Use(APIService).domain.get(),
+                schema: OpenAPISchema("ActiveDirectoyDomainAdminData"),
+                updateResource: (_, data) => Use(APIService).domain.put(data)
+            }
+        ],
+        formTitle: _ => "Admin setup",
+        requestObject: _ => Use(APIService).domain.get(),
+        schema: OpenAPISchema("ActiveDirectoyDomainAdminData")
     },
-    displayText: "Device",
-    icon: "pc-display",
-    routingKey: "{deviceName}",
-};
-
-export const devicesRoute: RouteSetup<{}, { name: string }> = {
-    content: {
-        type: "collection",
-        child: deviceRoute,
-        id: "name",
-        requestObjects: () => APIMap(Use(APIService).devices.get(), x => ({ name: x })),
-    },
-    displayText: "Devices",
-    icon: "pc-display",
+    displayText: "Domain",
+    icon: "gear",
     requiredScopes: ["admin"],
-    routingKey: "devices",
+    routingKey: "domain",
 };

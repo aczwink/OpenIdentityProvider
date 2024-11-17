@@ -29,8 +29,8 @@ CREATE TABLE `appregistrations` (
   `displayName` varchar(200) NOT NULL,
   `secret` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `redirectURIs` varchar(200) NOT NULL,
-  `scopes` text NOT NULL,
-  PRIMARY KEY (`internalId`)
+  PRIMARY KEY (`internalId`),
+  UNIQUE KEY `externalId` (`externalId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -43,11 +43,12 @@ DROP TABLE IF EXISTS `appregistrations_claims`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `appregistrations_claims` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `appregistrationId` int(10) unsigned NOT NULL,
+  `appRegistrationId` int(10) unsigned NOT NULL,
   `claimName` varchar(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `claimType` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `claimType` varchar(30) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `appregistrations_claims_appregistrationId` FOREIGN KEY (`appregistrationId`) REFERENCES `appregistrations` (`internalId`)
+  KEY `appregistrations_claims_appregistrationId` (`appRegistrationId`),
+  CONSTRAINT `appregistrations_claims_appregistrationId` FOREIGN KEY (`appRegistrationId`) REFERENCES `appregistrations` (`internalId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -66,6 +67,35 @@ CREATE TABLE `appregistrations_claims_values` (
   KEY `appregistrations_claims_values_groupId` (`groupId`),
   CONSTRAINT `appregistrations_claims_values_claimId` FOREIGN KEY (`claimId`) REFERENCES `appregistrations_claims` (`id`),
   CONSTRAINT `appregistrations_claims_values_groupId` FOREIGN KEY (`groupId`) REFERENCES `groups` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `config`
+--
+
+DROP TABLE IF EXISTS `config`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `config` (
+  `configKey` varchar(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `value` varchar(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  PRIMARY KEY (`configKey`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `dnsrecords`
+--
+
+DROP TABLE IF EXISTS `dnsrecords`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `dnsrecords` (
+  `label` varchar(50) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `recordType` varchar(5) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `value` varchar(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  PRIMARY KEY (`label`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -110,7 +140,39 @@ DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
   `internalId` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `externalId` varchar(200) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  PRIMARY KEY (`internalId`)
+  PRIMARY KEY (`internalId`),
+  UNIQUE KEY `externalId` (`externalId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `users_clientSecrets`
+--
+
+DROP TABLE IF EXISTS `users_clientSecrets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `users_clientSecrets` (
+  `userId` int(10) unsigned NOT NULL,
+  `pwHash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `pwSalt` char(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  PRIMARY KEY (`userId`),
+  CONSTRAINT `users_clientSecrets_userId` FOREIGN KEY (`userId`) REFERENCES `users` (`internalId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `users_human`
+--
+
+DROP TABLE IF EXISTS `users_human`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `users_human` (
+  `userId` int(10) unsigned NOT NULL,
+  `givenName` varchar(200) NOT NULL,
+  PRIMARY KEY (`userId`),
+  CONSTRAINT `users_human_userId` FOREIGN KEY (`userId`) REFERENCES `users` (`internalId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -123,4 +185,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-10-20 22:27:47
+-- Dump completed on 2024-11-10 22:20:47

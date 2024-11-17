@@ -19,21 +19,21 @@
 import { RouteSetup } from "acfrontendex";
 import { APIService } from "../services/APIService";
 import { DNSRecord } from "../../dist/api";
-import { APISchemaOf } from "../api-info";
+import { OpenAPISchema } from "../api-info";
 import { Use } from "acfrontend";
 
-const createRecordRoute: RouteSetup<DNSRecord> = {
+const createRecordRoute: RouteSetup<{}, DNSRecord> = {
     content: {
         type: "create",
         call: (_, data) => Use(APIService).dns.post(data),
-        schema: APISchemaOf(x => x.DNSRecord)
+        schema: OpenAPISchema("DNSRecord")
     },
     displayText: "Create record",
     icon: "plus",
     routingKey: "create",
 };
 
-export const dnsRoute: RouteSetup<DNSRecord> = {
+export const dnsRoute: RouteSetup<{}, DNSRecord> = {
     content: {
         type: "list",
         actions: [createRecordRoute],
@@ -43,10 +43,8 @@ export const dnsRoute: RouteSetup<DNSRecord> = {
                 deleteResource: (_, record) => Use(APIService).dns._any_.delete(record.label),
             }
         ],
-        dataSource: {
-            call: () => Use(APIService).dns.get(),
-            id: "label"
-        },
+        requestObjects: () => Use(APIService).dns.get(),
+        schema: OpenAPISchema("DNSRecord")
     },
     displayText: "DNS",
     icon: "postcard",

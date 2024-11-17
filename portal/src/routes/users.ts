@@ -18,22 +18,22 @@
 
 import { RouteSetup } from "acfrontendex";
 import { APIService } from "../services/APIService";
-import { HumanUserAccount, UserAccount } from "../../dist/api";
-import { APISchemaOf } from "../api-info";
+import { FullUserAccountData, HumanUserAccount } from "../../dist/api";
+import { OpenAPISchema } from "../api-info";
 import { Use } from "acfrontend";
 
-const createUserRoute: RouteSetup<HumanUserAccount> = {
+const createUserRoute: RouteSetup<{}, HumanUserAccount> = {
     content: {
         type: "create",
         call: (_, data) => Use(APIService).users.post(data),
-        schema: APISchemaOf(x => x.HumanUserAccount)
+        schema: OpenAPISchema("HumanUserAccount")
     },
     displayText: "Create user",
     icon: "person-plus",
     routingKey: "create",
 };
 
-export const userRoute: RouteSetup<HumanUserAccount, { userId: string }> = {
+export const userRoute: RouteSetup<{ userId: string }, FullUserAccountData> = {
     content: {
         type: "object",
         actions: [
@@ -44,22 +44,21 @@ export const userRoute: RouteSetup<HumanUserAccount, { userId: string }> = {
         ],
         formTitle: (_, user) => user.eMailAddress,
         requestObject: ids => Use(APIService).users._any_.get(ids.userId),
-        schema: APISchemaOf(x => x.HumanUserAccount)
+        schema: OpenAPISchema("FullUserAccountData")
     },
     displayText: "User",
     icon: "person",
     routingKey: "{userId}",
 };
 
-export const usersRoute: RouteSetup<HumanUserAccount> = {
+export const usersRoute: RouteSetup<{}, HumanUserAccount> = {
     content: {
         type: "collection",
         actions: [createUserRoute],
         child: userRoute,
-        dataSource: {
-            call: () => Use(APIService).users.get(),
-            id: "eMailAddress"
-        },
+        id: "eMailAddress",
+        requestObjects: () => Use(APIService).users.get(),
+        schema: OpenAPISchema("HumanUserAccount"),
     },
     displayText: "Users",
     icon: "person",

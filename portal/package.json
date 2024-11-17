@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "generate-api": "npx acts-util-apilib",
-    "start-dev": "webpack serve --open"
+    "start-dev": "webpack serve --open",
+    "build": "npx webpack",
+    "build-docker-image": "npm run build && docker build -t oidp-portal ."
   },
   "keywords": [],
   "author": "Amir Czwink",
