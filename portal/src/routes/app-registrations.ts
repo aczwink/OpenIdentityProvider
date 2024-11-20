@@ -19,24 +19,24 @@
 import { RouteSetup } from "acfrontendex";
 import { APIService } from "../services/APIService";
 import { AppRegistration, AppRegistrationOverviewData, AppRegistrationProperties, ClaimValue, ClaimVariable, ClaimVariableProperties } from "../../dist/api";
-import { APISchemaOf } from "../api-info";
+import { OpenAPISchema } from "../api-info";
 import { Use } from "acfrontend";
 
 type AppRegId = { appRegId: string };
 type ClaimId = AppRegId & { claimId: number };
 
-const createAppRegRoute: RouteSetup<AppRegistrationProperties> = {
+const createAppRegRoute: RouteSetup<{}, AppRegistrationProperties> = {
     content: {
         type: "create",
         call: (_, data) => Use(APIService).appregistrations.post(data),
-        schema: APISchemaOf(schemas => schemas.AppRegistrationProperties)
+        schema: OpenAPISchema("AppRegistrationProperties")
     },
     displayText: "Create App-registration",
     icon: "plus",
     routingKey: "create",
 };
 
-const appRegPropsRoute: RouteSetup<AppRegistration, AppRegId> = {
+const appRegPropsRoute: RouteSetup<AppRegId, AppRegistration> = {
     content: {
         type: "object",
         actions: [
@@ -47,36 +47,36 @@ const appRegPropsRoute: RouteSetup<AppRegistration, AppRegId> = {
         ],
         formTitle: (_, appReg) => appReg.displayName,
         requestObject: ids => Use(APIService).appregistrations._any_.get(ids.appRegId),
-        schema: APISchemaOf(x => x.AppRegistration)
+        schema: OpenAPISchema("AppRegistration")
     },
     displayText: "Overview",
     icon: "app-indicator",
     routingKey: "overview",
 };
 
-const createClaimRoute: RouteSetup<ClaimVariableProperties, AppRegId> = {
+const createClaimRoute: RouteSetup<AppRegId, ClaimVariableProperties> = {
     content: {
         type: "create",
         call: (ids, data) => Use(APIService).appregistrations._any_.claims.post(ids.appRegId, data),
-        schema: APISchemaOf(schemas => schemas.ClaimVariableProperties)
+        schema: OpenAPISchema("ClaimVariableProperties")
     },
     displayText: "Add claim",
     icon: "plus",
     routingKey: "add",
 };
 
-const createClaimValueRoute: RouteSetup<ClaimValue, ClaimId> = {
+const createClaimValueRoute: RouteSetup<ClaimId, ClaimValue> = {
     content: {
         type: "create",
         call: (ids, data) => Use(APIService).appregistrations._any_.claims.values.post(ids.appRegId, { claimId: ids.claimId }, data),
-        schema: APISchemaOf(schemas => schemas.ClaimValue)
+        schema: OpenAPISchema("ClaimValue")
     },
     displayText: "Add claim value",
     icon: "plus",
     routingKey: "add",
 };
 
-const claimValuesRoute: RouteSetup<ClaimValue, ClaimId> = {
+const claimValuesRoute: RouteSetup<ClaimId, ClaimValue> = {
     content: {
         type: "list",
         actions: [createClaimValueRoute],
@@ -86,27 +86,22 @@ const claimValuesRoute: RouteSetup<ClaimValue, ClaimId> = {
                 deleteResource: (ids, value) => Use(APIService).appregistrations._any_.claims.values.delete(ids.appRegId, { claimId: ids.claimId }, value)
             }
         ],
-        dataSource: {
-            call: ids => Use(APIService).appregistrations._any_.claims.values.get(ids.appRegId, { claimId: ids.claimId }),
-            id: "value",
-            schema: APISchemaOf(x => x.ClaimValue)
-        },
+        requestObjects: ids => Use(APIService).appregistrations._any_.claims.values.get(ids.appRegId, { claimId: ids.claimId }),
+        schema: OpenAPISchema("ClaimValue")
     },
     displayText: "Values",
     icon: "card-list",
     routingKey: "{claimId}",
 }
 
-const claimsRoute: RouteSetup<ClaimVariable, AppRegId> = {
+const claimsRoute: RouteSetup<AppRegId, ClaimVariable> = {
     content: {
         type: "collection",
         actions: [createClaimRoute],
         child: claimValuesRoute,
-        dataSource: {
-            call: ids => Use(APIService).appregistrations._any_.claims.get(ids.appRegId),
-            id: "id",
-            schema: APISchemaOf(x => x.ClaimVariable)
-        }
+        id: "id",
+        requestObjects: ids => Use(APIService).appregistrations._any_.claims.get(ids.appRegId),
+        schema: OpenAPISchema("ClaimVariable")
     },
     displayText: "Claims",
     icon: "passport",
@@ -123,22 +118,21 @@ const appRegRoute: RouteSetup<AppRegistration, AppRegId> = {
                 entries: [appRegPropsRoute, claimsRoute]
             }
         ],
-        formTitle: ids => "Application registration",
+        formTitle: _ => "Application registration",
     },
     displayText: "Application registration",
     icon: "app-indicator",
     routingKey: "{appRegId}",
 };
 
-export const appRegistrationsRoutes: RouteSetup<AppRegistrationOverviewData> = {
+export const appRegistrationsRoutes: RouteSetup<{}, AppRegistrationOverviewData> = {
     content: {
         type: "collection",
         actions: [createAppRegRoute],
         child: appRegRoute,
-        dataSource: {
-            call: () => Use(APIService).appregistrations.get(),
-            id: "id"
-        }
+        id: "id",
+        requestObjects: () => Use(APIService).appregistrations.get(),
+        schema: OpenAPISchema("AppRegistrationOverviewData")
     },
     displayText: "Application registrations",
     icon: "app-indicator",

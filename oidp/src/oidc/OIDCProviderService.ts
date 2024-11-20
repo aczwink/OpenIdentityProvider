@@ -104,9 +104,11 @@ const oidcConfig: Configuration = {
             accountId: sub,
             claims: async function()
             {
-                const user = await GlobalInjector.Resolve(UserAccountsController).QueryByExternalId(sub);
+                const uac = GlobalInjector.Resolve(UserAccountsController);
+                const userId = await uac.QueryInternalId(sub);
+                const user = await uac.QueryByExternalId(sub);
                 return {
-                    sub,
+                    sub: userId!.toString(), //sub must not be able to be mutated by user
 
                     email: user!.eMailAddress,
                     given_name: user!.givenName,

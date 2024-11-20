@@ -27,11 +27,12 @@ import { allowedOrigins, CONFIG_SIGNING_KEY, port } from "./config";
 import { OIDCProviderService } from "./oidc/OIDCProviderService";
 import { OpenAPI } from 'acts-util-core';
 import { APIRegistry } from 'acts-util-apilib';
-import { ADService } from "./services/ADService";
+import { ActiveDirectoryService } from "./services/ActiveDirectoryService";
+import { UsersManager } from "./services/UsersManager";
 
 async function BootstrapServer()
 {
-    GlobalInjector.Resolve(ADService).Initialize(); //start samba AD early
+    GlobalInjector.Resolve(ActiveDirectoryService).Initialize(); //start samba AD early
 
     const requestHandlerChain = Factory.CreateRequestHandlerChain();
     requestHandlerChain.AddCORSHandler(allowedOrigins);
@@ -80,4 +81,41 @@ async function BootstrapServer()
     });
 }
 
-BootstrapServer();
+const command = process.argv[2];
+if(command !== undefined)
+    ExecMgmtCommand(command, process.argv.slice(3));
+else
+    BootstrapServer();
+
+async function ExecMgmtCommand(command: string, args: string[])
+{
+    switch(command)
+    {
+        case "create-user":
+        {
+            if(args.length !== 2)
+            {
+                console.error("You need to provide exactly two arguments on the command line, e-mail address and password");
+                return;
+            }
+
+            const eMailAddress = args[0];
+            const password = args[1];
+
+            const usersManager = GlobalInjector.Resolve(UsersManager);
+            const userId = await usersManager.CreateUser({
+                type: "human",
+                eMailAddress,
+                givenName: eMailAddress
+            });
+            const error = await usersManager.SetPassword(userId, password);
+            if(error)
+                console.log("Error while setting users password: ", error);
+            else
+                console.log("User", eMailAddress, "was created successfully.");
+        }
+        break;
+        default:
+            console.error("Unknown management command: " + command);
+    }
+}

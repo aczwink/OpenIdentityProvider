@@ -17,5 +17,9 @@
  * */
 
 import "./api/app-registrations";
+import "./api/devices";
+import "./api/dns";
+import "./api/domain";
+import "./api/own-user";
 import "./api/usergroups";
 import "./api/users";

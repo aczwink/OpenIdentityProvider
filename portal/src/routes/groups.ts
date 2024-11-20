@@ -19,23 +19,23 @@
 import { RouteSetup } from "acfrontendex";
 import { APIService } from "../services/APIService";
 import { UserAccount, UserGroup, UserGroupProperties } from "../../dist/api";
-import { APISchemaOf } from "../api-info";
+import { OpenAPISchema } from "../api-info";
 import { Use } from "acfrontend";
 
 type GroupId = { userGroupId: number };
 
-const createGroupRoute: RouteSetup<UserGroupProperties> = {
+const createGroupRoute: RouteSetup<{}, UserGroupProperties> = {
     content: {
         type: "create",
         call: (_, data) => Use(APIService).usergroups.post(data),
-        schema: APISchemaOf(x => x.UserGroupProperties)
+        schema: OpenAPISchema("UserGroupProperties")
     },
     displayText: "Create user group",
     icon: "plus",
     routingKey: "create",
 };
 
-const userGroupOverviewRoute: RouteSetup<UserGroup, GroupId> = {
+const userGroupOverviewRoute: RouteSetup<GroupId, UserGroup> = {
     content: {
         type: "object",
         actions: [
@@ -46,25 +46,25 @@ const userGroupOverviewRoute: RouteSetup<UserGroup, GroupId> = {
         ],
         formTitle: (_, group) => group.name,
         requestObject: ids => Use(APIService).usergroups._any_.get(ids.userGroupId),
-        schema: APISchemaOf(x => x.UserGroup)
+        schema: OpenAPISchema("UserGroup")
     },
     displayText: "Overview",
     icon: "people",
     routingKey: "overview",
 };
 
-const addMemberRoute: RouteSetup<UserAccount, GroupId> = {
+const addMemberRoute: RouteSetup<GroupId, UserAccount> = {
     content: {
         type: "create",
         call: (ids, data) => Use(APIService).usergroups._any_.members.post(ids.userGroupId, { userId: data.id }),
-        schema: APISchemaOf(x => x.UserAccount),
+        schema: OpenAPISchema("UserAccount"),
     },
     displayText: "Add member",
     icon: "plus",
     routingKey: "add",
 };
 
-const membersRoute: RouteSetup<UserAccount, GroupId> = {
+const membersRoute: RouteSetup<GroupId, UserAccount> = {
     content: {
         type: "list",
         actions: [addMemberRoute],
@@ -74,11 +74,8 @@ const membersRoute: RouteSetup<UserAccount, GroupId> = {
                 deleteResource: (ids, user) => Use(APIService).usergroups._any_.members.delete(ids.userGroupId, { userId: user.id })
             }
         ],
-        dataSource: {
-            call: ids => Use(APIService).usergroups._any_.members.get(ids.userGroupId),
-            id: "id",
-            schema: APISchemaOf(x => x.UserAccount)
-        },
+        requestObjects: ids => Use(APIService).usergroups._any_.members.get(ids.userGroupId),
+        schema: OpenAPISchema("UserAccount"),
     },
     displayText: "Members",
     icon: "people",
@@ -102,15 +99,14 @@ export const userGroupRoute: RouteSetup<UserGroup, GroupId> = {
     routingKey: "{userGroupId}",
 };
 
-export const userGroupsRoutes: RouteSetup<UserGroup> = {
+export const userGroupsRoutes: RouteSetup<{}, UserGroup> = {
     content: {
         type: "collection",
         actions: [createGroupRoute],
         child: userGroupRoute,
-        dataSource: {
-            call: () => Use(APIService).usergroups.get(),
-            id: "id"
-        }
+        id: "id",
+        requestObjects: () => Use(APIService).usergroups.get(),
+        schema: OpenAPISchema("UserGroup")
     },
     displayText: "User groups",
     icon: "people-fill",

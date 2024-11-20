@@ -13,3 +13,10 @@ openssl req -x509 -newkey rsa:4096 -keyout private.key -out oidp-public.crt -sha
 To add it to the trusted certificate store do:
 sudo cp oidp-public.crt /usr/local/share/ca-certificates/
 sudo update-ca-certificates
+
+## Configuration
+
+Set hostname of the domain controller. DO NOT use name "LOCALDC", since it is a reserved name.
+
+### Environment variables
+OIDP_DCIP - Static IP of the primary domain controller. It should be on your hosts network in order for devices to easily reach it.

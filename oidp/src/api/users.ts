@@ -16,16 +16,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
-import { APIController, Body, Delete, Get, NotFound, Path, Post, Security } from "acts-util-apilib";
+import { APIController, Body, Common, Delete, Get, NotFound, Path, Post, Security } from "acts-util-apilib";
 import { UserAccountOverviewData, UserAccountsController } from "../data-access/UserAccountsController";
 import { OIDC_API_SCHEME, SCOPE_ADMIN } from "../api_security";
-import { ADService } from "../services/ADService";
+import { ActiveDirectoryService, ActiveDirectoryUserNames } from "../services/ActiveDirectoryService";
+import { UsersManager } from "../services/UsersManager";
+import { Of } from "acts-util-core";
+
+interface FullUserAccountData extends UserAccountOverviewData, ActiveDirectoryUserNames
+{
+}
 
 @APIController("users")
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api_
 {
-    constructor(private userAccountsController: UserAccountsController, private adService: ADService)
+    constructor(private userAccountsController: UserAccountsController, private adService: ActiveDirectoryService, private usersManager: UsersManager)
     {
     }
 
@@ -34,8 +40,7 @@ class _api_
         @Body data: UserAccountOverviewData
     )
     {
-        const userId = await this.userAccountsController.Create(data);
-        await this.adService.CreateUser(userId);
+        await this.usersManager.CreateUser(data);
     }
 
     @Get()
@@ -49,28 +54,43 @@ class _api_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api2_
 {
-    constructor(private userAccountsController: UserAccountsController, private adService: ADService)
+    constructor(private userAccountsController: UserAccountsController, private adService: ActiveDirectoryService)
     {
     }
 
-    @Delete()
-    public async DeleteUser(
+    @Common()
+    public async GetUser(
         @Path userId: string
     )
     {
         const internalUserId = await this.userAccountsController.QueryInternalId(userId);
         if(internalUserId === undefined)
             return NotFound("user not found");
+        return internalUserId;
+    }
 
+    @Delete()
+    public async DeleteUser(
+        @Common internalUserId: number
+    )
+    {
         await this.adService.DeleteUser(internalUserId);
         await this.userAccountsController.Delete(internalUserId);
     }
 
     @Get()
     public async RequestAccount(
-        @Path userId: string
+        @Common internalUserId: number
     )
     {
-        return await this.userAccountsController.QueryByExternalId(userId);
+        const userAccount = await this.userAccountsController.Query(internalUserId);
+        if(userAccount === undefined)
+            return NotFound("user not found");
+        const adNames = await this.adService.GetUserNames(internalUserId);
+
+        return Of<FullUserAccountData>({
+            ...userAccount,
+            ...adNames
+        });
     }
 }

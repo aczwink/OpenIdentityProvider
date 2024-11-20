@@ -20,12 +20,13 @@ import { APIController, Body, BodyProp, Delete, Get, NotFound, Path, Post, Secur
 import { OIDC_API_SCHEME, SCOPE_ADMIN } from "../api_security";
 import { GroupsController, UserGroupProperties } from "../data-access/GroupsController";
 import { UserAccountsController } from "../data-access/UserAccountsController";
+import { ActiveDirectoryService } from "../services/ActiveDirectoryService";
 
 @APIController("usergroups")
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api_
 {
-    constructor(private groupsController: GroupsController)
+    constructor(private groupsController: GroupsController, private activeDirectoryService: ActiveDirectoryService)
     {
     }
 
@@ -34,7 +35,9 @@ class _api_
         @Body props: UserGroupProperties
     )
     {
-        return await this.groupsController.Create(props);
+        const groupId = await this.groupsController.Create(props);
+        await this.activeDirectoryService.CreateGroup(groupId);
+        return groupId;
     }
 
     @Get()
@@ -48,7 +51,7 @@ class _api_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api2_
 {
-    constructor(private groupsController: GroupsController)
+    constructor(private groupsController: GroupsController, private activeDirectoryService: ActiveDirectoryService)
     {
     }
 
@@ -57,6 +60,7 @@ class _api2_
         @Path userGroupId: number
     )
     {
+        await this.activeDirectoryService.DeleteGroup(userGroupId);
         await this.groupsController.Delete(userGroupId);
     }
 
@@ -73,7 +77,7 @@ class _api2_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api3_
 {
-    constructor(private userAccountsController: UserAccountsController, private groupsController: GroupsController)
+    constructor(private userAccountsController: UserAccountsController, private groupsController: GroupsController, private activeDirectoryService: ActiveDirectoryService)
     {
     }
 
@@ -86,6 +90,7 @@ class _api3_
         const internalUserId = await this.userAccountsController.QueryInternalId(userId);
         if(internalUserId === undefined)
             return NotFound("user not found");
+        await this.activeDirectoryService.RemoveMemberFromGroup(userGroupId, internalUserId);
         await this.groupsController.RemoveMember(userGroupId, internalUserId);
     }
 
@@ -107,5 +112,6 @@ class _api3_
         if(internalUserId === undefined)
             return NotFound("user not found");
         await this.groupsController.AddMember(userGroupId, internalUserId);
+        await this.activeDirectoryService.AddMemberToGroup(userGroupId, internalUserId);
     }
 }
