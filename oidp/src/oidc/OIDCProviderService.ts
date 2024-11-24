@@ -19,7 +19,7 @@ import express from "express";
 import { GlobalInjector, Injectable } from "acts-util-node";
 import Provider, { Adapter, Configuration } from 'oidc-provider';
 import { ClientsAdapter } from "./ClientsAdapter";
-import { MemoryAdapter } from "../MemoryAdapter";
+import { MemoryAdapter } from "./MemoryAdapter";
 import { allowedOrigins, CONFIG_SIGNING_KEY, port } from "../config";
 import { ClaimProviderService } from "../services/ClaimProviderService";
 import { ScopeEvaluationService } from "../services/ScopeEvaluationService";

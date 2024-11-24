@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
-import { APIController, Body, Delete, Get, NotFound, Path, Post, Query, Security } from "acts-util-apilib";
+import { APIController, Body, Delete, Get, NotFound, Path, Post, Put, Query, Security } from "acts-util-apilib";
 import { OIDC_API_SCHEME, SCOPE_ADMIN } from "../api_security";
 import { AppRegistrationProperties, AppRegistrationsController } from "../data-access/AppRegistrationsController";
 import { ClaimsController, ClaimValue, ClaimVariableProperties } from "../data-access/ClaimsController";
@@ -66,6 +66,15 @@ class _api2_
     )
     {
         return await this.appRegistrationsController.QueryByExternalId(appRegId);
+    }
+
+    @Put()
+    public async UpdateAppRegistrationProperties(
+        @Path appRegId: string,
+        @Body props: AppRegistrationProperties
+    )
+    {
+        await this.appRegistrationsController.UpdateByExternalId(appRegId, props);
     }
 }
 

@@ -30,6 +30,7 @@ export interface AppRegistrationProperties
 {
     displayName: string;
     redirectURIs: string[];
+    postLogoutRedirectURIs: string[];
 }
 
 interface AppRegistration extends AppRegistrationProperties
@@ -54,7 +55,8 @@ export class AppRegistrationsController
             externalId,
             secret: crypto.randomBytes(64).toString("hex"),
             displayName: data.displayName,
-            redirectURIs: JSON.stringify(data.redirectURIs)
+            redirectURIs: JSON.stringify(data.redirectURIs),
+            postLogoutRedirectURIs: JSON.stringify(data.postLogoutRedirectURIs)
         });
 
         return externalId as string;
@@ -79,6 +81,7 @@ export class AppRegistrationsController
             clientSecret: row.secret,
             displayName: row.displayName,
             redirectURIs: JSON.parse(row.redirectURIs),
+            postLogoutRedirectURIs: JSON.parse(row.postLogoutRedirectURIs)
         });
     }
 
@@ -97,5 +100,15 @@ export class AppRegistrationsController
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
         const rows = await conn.Select<AppRegistrationOverviewData>("SELECT externalId AS id, displayName FROM appregistrations");
         return rows;
+    }
+
+    public async UpdateByExternalId(externalId: string, data: AppRegistrationProperties)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.UpdateRows("appregistrations", {
+            displayName: data.displayName,
+            redirectURIs: JSON.stringify(data.redirectURIs),
+            postLogoutRedirectURIs: JSON.stringify(data.postLogoutRedirectURIs)
+        }, "externalId = ?", externalId)
     }
 }

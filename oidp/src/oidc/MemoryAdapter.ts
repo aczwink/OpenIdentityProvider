@@ -65,9 +65,19 @@ export class MemoryAdapter implements Adapter
         delete this.storage[id];
     }
 
-    revokeByGrantId(grantId: string): Promise<void | undefined> {
-        console.log("MemoryAdapter.revokeByGrantId");
-        throw new Error("Method not implemented.");
+    public async revokeByGrantId(grantId: string): Promise<void | undefined>
+    {
+        for (const key in this.storage)
+        {
+            if (Object.prototype.hasOwnProperty.call(this.storage, key))
+            {
+                const value = this.storage[key];
+                if(value?.grantId === grantId)
+                {
+                    delete this.storage[key];
+                }
+            }
+        }
     }
 
     //State

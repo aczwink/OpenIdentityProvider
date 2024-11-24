@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-import { BootstrapApp } from "acfrontendex";
+import { BootstrapApp, CreateOAuth2RedirectURIs } from "acfrontendex";
 import { usersRoute } from "./routes/users";
 import { userGroupsRoutes } from "./routes/groups";
 import { appRegistrationsRoutes } from "./routes/app-registrations";
@@ -30,14 +30,16 @@ import { domainRoute } from "./routes/domain";
 
 RegisterCustomFormats();
 
+
 BootstrapApp({
     features: {
         oAuth2: {
             authorizeEndpoint: process.env.OIDP_AUTH_ENDPOINT!,
             clientId: process.env.OIDP_CLIENTID!,
+            endSessionEndpoint: process.env.OIDP_ENDSESSION_ENDPOINT!,
             flow: "authorizationCode",
-            redirectURI: process.env.OIDP_REDIRECTURI!,
-            tokenEndpoint: process.env.OIDP_TOKEN_ENDPOINT!
+            tokenEndpoint: process.env.OIDP_TOKEN_ENDPOINT!,
+            ...CreateOAuth2RedirectURIs(process.env.OIDP_FRONTEND_BASEURL!),
         },
 
         OIDC: true,

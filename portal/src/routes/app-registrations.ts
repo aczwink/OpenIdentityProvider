@@ -41,6 +41,12 @@ const appRegPropsRoute: RouteSetup<AppRegId, AppRegistration> = {
         type: "object",
         actions: [
             {
+                type: "edit",
+                requestObject: ids => Use(APIService).appregistrations._any_.get(ids.appRegId),
+                schema: OpenAPISchema("AppRegistrationProperties"),
+                updateResource: (ids, appReg) => Use(APIService).appregistrations._any_.put(ids.appRegId, appReg),
+            },
+            {
                 type: "delete",
                 deleteResource: ids => Use(APIService).appregistrations._any_.delete(ids.appRegId),
             }

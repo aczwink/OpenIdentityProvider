@@ -27,8 +27,12 @@ export function RegisterCustomFormats()
 {
     const cfm = RootInjector.Resolve(CustomFormatRegistry);
 
-    cfm.RegisterFormatPresenter("number", "usergroup-id", userGroupId => <UserGroupPresenter userGroupId={userGroupId} />);
-    cfm.RegisterFormatEditor("number", "usergroup-id", (value, valueChanged) => <UserGroupSelectionComponent userGroupId={value} valueChanged={valueChanged} />);
-    cfm.RegisterFormatEditor("string", "user-id", (value, valueChanged) => <UserSelectionComponent userId={value} valueChanged={valueChanged} />);
-    cfm.RegisterFormatPresenter("string", "user-id", userId => <UserValuePresenter userId={userId} />);
+    cfm.RegisterFormat("number", "usergroup-id", {
+        editor: (value, valueChanged) => <UserGroupSelectionComponent userGroupId={value} valueChanged={valueChanged} />,
+        presenter: userGroupId => <UserGroupPresenter userGroupId={userGroupId} />,
+    });
+    cfm.RegisterFormat("string", "user-id", {
+        editor: (value, valueChanged) => <UserSelectionComponent userId={value} valueChanged={valueChanged} />,
+        presenter: userId => <UserValuePresenter userId={userId} />
+    });
 }

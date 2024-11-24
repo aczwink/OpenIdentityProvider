@@ -41,6 +41,7 @@ export class ClientsAdapter implements Adapter
                 redirect_uris: appReg.redirectURIs,
                 token_endpoint_auth_method: "none",
                 id_token_signed_response_alg: "ES256",
+                post_logout_redirect_uris: appReg.postLogoutRedirectURIs
             };
         }
     }
