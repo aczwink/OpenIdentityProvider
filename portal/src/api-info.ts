@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 import { APIResponse } from "acfrontend";
-import { OpenAPI } from "../../../ACTS-Util/core/dist/main";
+import { OpenAPI } from "acts-util-core";
 import root from "../../oidp/dist/openapi.json";
 
 const apiSchemas = root.components.schemas;
