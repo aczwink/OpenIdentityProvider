@@ -20,12 +20,19 @@ import { APIController, Body, Delete, Get, NotFound, Path, Post, Put, Query, Sec
 import { OIDC_API_SCHEME, SCOPE_ADMIN } from "../api_security";
 import { AppRegistrationProperties, AppRegistrationsController } from "../data-access/AppRegistrationsController";
 import { ClaimsController, ClaimValue, ClaimVariableProperties } from "../data-access/ClaimsController";
+import { AppRegistrationsManager } from "../services/AppRegistrationsManager";
+import { Of } from "acts-util-core";
+
+interface AppRegistrationDTO extends AppRegistrationProperties
+{
+    clientSecret: string;
+}
 
 @APIController("appregistrations")
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api_
 {
-    constructor(private appRegistrationsController: AppRegistrationsController)
+    constructor(private appRegistrationsController: AppRegistrationsController, private appRegistrationsManager: AppRegistrationsManager)
     {
     }
 
@@ -34,7 +41,7 @@ class _api_
         @Body props: AppRegistrationProperties
     )
     {
-        return this.appRegistrationsController.Create(props);
+        return this.appRegistrationsManager.Create(props);
     }
 
     @Get()
@@ -48,7 +55,7 @@ class _api_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api2_
 {
-    constructor(private appRegistrationsController: AppRegistrationsController)
+    constructor(private appRegistrationsController: AppRegistrationsController, private appRegistrationsManager: AppRegistrationsManager)
     {
     }
 
@@ -57,7 +64,7 @@ class _api2_
         @Path appRegId: string
     )
     {
-        await this.appRegistrationsController.DeleteByExternalId(appRegId);
+        await this.appRegistrationsManager.DeleteByExternalId(appRegId);
     }
 
     @Get()
@@ -65,7 +72,13 @@ class _api2_
         @Path appRegId: string
     )
     {
-        return await this.appRegistrationsController.QueryByExternalId(appRegId);
+        const appReg = await this.appRegistrationsController.QueryByExternalId(appRegId);
+        if(appReg === undefined)
+            return NotFound("app registration not found");
+
+        return Of<AppRegistrationDTO>({
+            ...appReg
+        });
     }
 
     @Put()
@@ -74,7 +87,7 @@ class _api2_
         @Body props: AppRegistrationProperties
     )
     {
-        await this.appRegistrationsController.UpdateByExternalId(appRegId, props);
+        await this.appRegistrationsManager.UpdateByExternalId(appRegId, props);
     }
 }
 

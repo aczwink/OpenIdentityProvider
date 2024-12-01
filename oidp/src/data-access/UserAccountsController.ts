@@ -31,7 +31,13 @@ interface HumanUserAccount
     eMailAddress: string;
     givenName: string;
 }
-export type UserAccountOverviewData = HumanUserAccount;
+interface ServicePrincipal
+{
+    type: "service-principal";
+    externalId: string;
+    displayName: string;
+}
+export type UserAccountOverviewData = HumanUserAccount | ServicePrincipal;
 
 interface UserAccount
 {
@@ -53,11 +59,8 @@ export class UserAccountsController
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
         const result = await conn.InsertRow("users", {
-            externalId: data.eMailAddress,
-        });
-        await conn.InsertRow("users_human", {
-            givenName: data.givenName,
-            userId: result.insertId
+            externalId: (data.type === "human") ? data.eMailAddress : data.externalId,
+            name: (data.type === "human") ? data.givenName : data.displayName
         });
         return result.insertId;
     }
@@ -65,7 +68,6 @@ export class UserAccountsController
     public async Delete(userId: number)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        await conn.DeleteRows("users_human", "userId = ?", userId);
         await conn.DeleteRows("users", "internalId = ?", userId);
     }
 
@@ -74,16 +76,16 @@ export class UserAccountsController
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
         const rows = await conn.Select("SELECT * FROM users");
         return rows.Values()
-            .Map(x => this.QueryFullUserData(x.internalId, x.externalId))
+            .Map(async x => (await this.QueryFullUserData(x))!)
             .PromiseAll();
     }
 
     public async Query(userId: number)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const row = await conn.SelectOne("SELECT externalId FROM users WHERE internalId = ?", userId);
+        const row = await conn.SelectOne("SELECT * FROM users WHERE internalId = ?", userId);
 
-        return this.QueryFullUserData(userId, row!.externalId);
+        return this.QueryFullUserData(row);
     }
     
     public async QueryByExternalId(externalId: string)
@@ -92,7 +94,7 @@ export class UserAccountsController
         if(internalId === undefined)
             return undefined;
 
-        return this.QueryFullUserData(internalId, externalId);
+        return this.Query(internalId);
     }
 
     public async QueryInternalId(externalId: string)
@@ -143,18 +145,24 @@ export class UserAccountsController
     }
 
     //Private methods
-    private async QueryFullUserData(internalId: number, externalId: string)
+    private async QueryFullUserData(row: any): Promise<UserAccountOverviewData | undefined>
     {
-        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const row = await conn.SelectOne("SELECT givenName FROM users_human WHERE userId = ?", internalId);
-        if(row !== undefined)
+        if(row === undefined)
+            return undefined;
+
+        const secretRow = await this.QuerySecretData(row.internalId);
+        if(secretRow === undefined)
         {
-            return Of<HumanUserAccount>({
-                eMailAddress: externalId,
-                givenName: row.givenName,
-                type: "human"
+            return Of<ServicePrincipal>({
+                type: "service-principal",
+                displayName: row.name,
+                externalId: row.externalId
             });
         }
-        throw new Error("TODO not implemented");
+        return Of<HumanUserAccount>({
+            eMailAddress: row.externalId,
+            givenName: row.name,
+            type: "human"
+        });
     }
 }

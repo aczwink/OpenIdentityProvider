@@ -51,6 +51,14 @@ export class UserValuePresenter extends Component<{ userId: string; }>
         const response = await this.apiService.users._any_.get(this.input.userId);
         if(response.statusCode !== 200)
             throw new Error("todo implement me");
-        this.userName = response.data.eMailAddress;
+        switch(response.data.userAccount.type)
+        {
+            case "human":
+                this.userName = response.data.userAccount.givenName;
+                break;
+            case "service-principal":
+                this.userName = response.data.userAccount.displayName;
+                break;
+        }
     }
 }

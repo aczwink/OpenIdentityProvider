@@ -26,11 +26,16 @@ DROP TABLE IF EXISTS `appregistrations`;
 CREATE TABLE `appregistrations` (
   `internalId` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `externalId` varchar(200) NOT NULL,
+  `type` char(18) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `displayName` varchar(200) NOT NULL,
   `secret` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `redirectURIs` varchar(200) NOT NULL,
+  `postLogoutRedirectURIs` varchar(200) NOT NULL,
+  `appUserId` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`internalId`),
-  UNIQUE KEY `externalId` (`externalId`)
+  UNIQUE KEY `externalId` (`externalId`),
+  KEY `appregistrations_appuserid` (`appUserId`),
+  CONSTRAINT `appregistrations_appuserid` FOREIGN KEY (`appUserId`) REFERENCES `users` (`internalId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -78,7 +83,7 @@ DROP TABLE IF EXISTS `config`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `config` (
-  `configKey` varchar(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `configKey` varchar(30) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `value` varchar(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   PRIMARY KEY (`configKey`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -92,10 +97,27 @@ DROP TABLE IF EXISTS `dnsrecords`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `dnsrecords` (
+  `zoneId` int(10) unsigned NOT NULL,
   `label` varchar(50) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `recordType` varchar(5) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `value` varchar(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  PRIMARY KEY (`label`)
+  PRIMARY KEY (`label`),
+  KEY `dnsrecords_zoneId` (`zoneId`),
+  CONSTRAINT `dnsrecords_zoneId` FOREIGN KEY (`zoneId`) REFERENCES `dnszones` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `dnszones`
+--
+
+DROP TABLE IF EXISTS `dnszones`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `dnszones` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -140,6 +162,7 @@ DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
   `internalId` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `externalId` varchar(200) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `name` varchar(200) NOT NULL,
   PRIMARY KEY (`internalId`),
   UNIQUE KEY `externalId` (`externalId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -160,21 +183,6 @@ CREATE TABLE `users_clientSecrets` (
   CONSTRAINT `users_clientSecrets_userId` FOREIGN KEY (`userId`) REFERENCES `users` (`internalId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `users_human`
---
-
-DROP TABLE IF EXISTS `users_human`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `users_human` (
-  `userId` int(10) unsigned NOT NULL,
-  `givenName` varchar(200) NOT NULL,
-  PRIMARY KEY (`userId`),
-  CONSTRAINT `users_human_userId` FOREIGN KEY (`userId`) REFERENCES `users` (`internalId`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -185,4 +193,4 @@ CREATE TABLE `users_human` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-11-10 22:20:47
+-- Dump completed on 2024-12-01 21:12:33

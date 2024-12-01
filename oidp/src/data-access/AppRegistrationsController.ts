@@ -28,12 +28,18 @@ interface AppRegistrationOverviewData
 
 export interface AppRegistrationProperties
 {
+    type: "authorization_code" | "client_credentials";
     displayName: string;
     redirectURIs: string[];
     postLogoutRedirectURIs: string[];
 }
 
-interface AppRegistration extends AppRegistrationProperties
+interface AppRegistrationRecord extends AppRegistrationProperties
+{
+    appUserId: number | null;
+}
+
+interface AppRegistration extends AppRegistrationRecord
 {
     id: string;
     clientSecret: string;
@@ -47,16 +53,18 @@ export class AppRegistrationsController
     }
 
     //Public methods
-    public async Create(data: AppRegistrationProperties)
+    public async Create(data: AppRegistrationRecord)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
         const externalId = crypto.randomUUID();
         await conn.InsertRow("appregistrations", {
             externalId,
             secret: crypto.randomBytes(64).toString("hex"),
+            type: data.type,
             displayName: data.displayName,
             redirectURIs: JSON.stringify(data.redirectURIs),
-            postLogoutRedirectURIs: JSON.stringify(data.postLogoutRedirectURIs)
+            postLogoutRedirectURIs: JSON.stringify(data.postLogoutRedirectURIs),
+            appUserId: data.appUserId
         });
 
         return externalId as string;
@@ -78,10 +86,12 @@ export class AppRegistrationsController
 
         return Of<AppRegistration>({
             id: row.externalId,
+            type: row.type,
             clientSecret: row.secret,
             displayName: row.displayName,
             redirectURIs: JSON.parse(row.redirectURIs),
-            postLogoutRedirectURIs: JSON.parse(row.postLogoutRedirectURIs)
+            postLogoutRedirectURIs: JSON.parse(row.postLogoutRedirectURIs),
+            appUserId: row.appUserId
         });
     }
 
@@ -102,13 +112,14 @@ export class AppRegistrationsController
         return rows;
     }
 
-    public async UpdateByExternalId(externalId: string, data: AppRegistrationProperties)
+    public async UpdateByExternalId(externalId: string, data: AppRegistrationRecord)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
         await conn.UpdateRows("appregistrations", {
             displayName: data.displayName,
             redirectURIs: JSON.stringify(data.redirectURIs),
-            postLogoutRedirectURIs: JSON.stringify(data.postLogoutRedirectURIs)
+            postLogoutRedirectURIs: JSON.stringify(data.postLogoutRedirectURIs),
+            appUserId: data.appUserId
         }, "externalId = ?", externalId)
     }
 }

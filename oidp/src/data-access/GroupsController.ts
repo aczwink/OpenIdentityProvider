@@ -80,6 +80,13 @@ export class GroupsController
         return rows;
     }
 
+    public async QueryGroupsUserIsMemberOf(userId: number)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const rows = await conn.Select("SELECT groupId FROM groups_members WHERE userId = ?", userId);
+        return rows.map(row => row.groupId as number);
+    }
+
     public async RemoveMember(userGroupId: number, userId: number)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();

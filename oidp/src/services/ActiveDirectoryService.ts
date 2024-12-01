@@ -21,7 +21,7 @@ import child_process from "child_process";
 import { Injectable } from "acts-util-node";
 import { UserAccountsController } from "../data-access/UserAccountsController";
 import { CONFIG_DOMAIN } from "../config";
-import { DNSRecord } from "../data-access/DNSController";
+import { DNSRecord, DNSZone } from "../data-access/DNSController";
 import { ConfigController } from "../data-access/ConfigController";
 import { Of } from "acts-util-core";
 import { GroupsController } from "../data-access/GroupsController";
@@ -69,10 +69,16 @@ export class ActiveDirectoryService
         await this.Exec(["samba-tool", "group", "addmembers", group_sAMAccountName, user_sAMAccountName]);
     }
 
-    public async CreateDNSRecord(record: DNSRecord)
+    public async CreateDNSRecord(zone: DNSZone, record: DNSRecord)
     {
-        const domainName = this.GetDomainControllerDomainName();
-        await this.ExecWithLogin(["samba-tool", "dns", "add", domainName, CONFIG_DOMAIN.domain, record.label, record.recordType, record.value]);
+        const dcName = this.GetDomainControllerDomainName();
+        await this.ExecWithLogin(["samba-tool", "dns", "add", dcName, zone.name, record.label, record.recordType, record.value]);
+    }
+
+    public async CreateDNSZone(name: string)
+    {
+        const dcName = this.GetDomainControllerDomainName();
+        await this.ExecWithLogin(["samba-tool", "dns", "zonecreate", dcName, name]);
     }
 
     public async CreateGroup(userGroupId: number)
@@ -89,20 +95,36 @@ export class ActiveDirectoryService
     {
         const sAMAccountName = await this.MapToUser_sAMAccountName(userId);
         const account = await this.userAccountsController.Query(userId);
+        if(account === undefined)
+            throw new Error("Should never happen1");
+
+        const args = [];
+        if(account.type === "human")
+        {
+            args.push(
+                "--given-name", account.givenName,
+                "--mail-address", account.eMailAddress,
+            );
+        }
 
         await this.Exec([
             "samba-tool", "user", "add",
             sAMAccountName,
-            "--given-name", account.givenName,
-            "--mail-address", account.eMailAddress,
-            "--random-password"
+            "--random-password",
+            ...args,
         ]);
     }
 
-    public async DeleteDNSRecord(record: DNSRecord)
+    public async DeleteDNSRecord(zone: DNSZone, record: DNSRecord)
     {
-        const domainName = this.GetDomainControllerDomainName();
-        await this.ExecWithLogin(["samba-tool", "dns", "delete", domainName, CONFIG_DOMAIN.domain, record.label, record.recordType, record.value]);
+        const dcName = this.GetDomainControllerDomainName();
+        await this.ExecWithLogin(["samba-tool", "dns", "delete", dcName, zone.name, record.label, record.recordType, record.value]);
+    }
+
+    public async DeleteDNSZone(name: string)
+    {
+        const dcName = this.GetDomainControllerDomainName();
+        await this.ExecWithLogin(["samba-tool", "dns", "zonedelete", dcName, name]);
     }
 
     public async DeleteGroup(userGroupId: number)
@@ -280,10 +302,19 @@ export class ActiveDirectoryService
     private async MapToUser_sAMAccountName(userId: number)
     {
         const account = await this.userAccountsController.Query(userId);
+        if(account === undefined)
+            throw new Error("Should never happen2");
+
         switch(this.GetUserNamingStrategy())
         {
             case "firstName":
-                return account.givenName;
+                switch(account.type)
+                {
+                    case "human":
+                        return account.givenName;
+                    case "service-principal":
+                        return account.displayName;
+                }
         }
     }
 

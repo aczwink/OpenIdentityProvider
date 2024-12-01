@@ -21,6 +21,7 @@ import { OIDC_API_SCHEME, SCOPE_ADMIN } from "../api_security";
 import { GroupsController, UserGroupProperties } from "../data-access/GroupsController";
 import { UserAccountsController } from "../data-access/UserAccountsController";
 import { ActiveDirectoryService } from "../services/ActiveDirectoryService";
+import { UsersManager } from "../services/UsersManager";
 
 @APIController("usergroups")
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
@@ -77,7 +78,9 @@ class _api2_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api3_
 {
-    constructor(private userAccountsController: UserAccountsController, private groupsController: GroupsController, private activeDirectoryService: ActiveDirectoryService)
+    constructor(private userAccountsController: UserAccountsController, private groupsController: GroupsController, private activeDirectoryService: ActiveDirectoryService,
+        private usersManager: UsersManager
+    )
     {
     }
 
@@ -90,8 +93,7 @@ class _api3_
         const internalUserId = await this.userAccountsController.QueryInternalId(userId);
         if(internalUserId === undefined)
             return NotFound("user not found");
-        await this.activeDirectoryService.RemoveMemberFromGroup(userGroupId, internalUserId);
-        await this.groupsController.RemoveMember(userGroupId, internalUserId);
+        await this.usersManager.RemoveMemberFromGroup(internalUserId, userGroupId);
     }
 
     @Get()

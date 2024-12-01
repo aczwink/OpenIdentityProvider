@@ -18,7 +18,7 @@
 
 import { RouteSetup } from "acfrontendex";
 import { APIService } from "../services/APIService";
-import { AppRegistration, AppRegistrationOverviewData, AppRegistrationProperties, ClaimValue, ClaimVariable, ClaimVariableProperties } from "../../dist/api";
+import { AppRegistrationDTO, AppRegistrationOverviewData, AppRegistrationProperties, ClaimValue, ClaimVariable, ClaimVariableProperties } from "../../dist/api";
 import { OpenAPISchema } from "../api-info";
 import { Use } from "acfrontend";
 
@@ -36,7 +36,7 @@ const createAppRegRoute: RouteSetup<{}, AppRegistrationProperties> = {
     routingKey: "create",
 };
 
-const appRegPropsRoute: RouteSetup<AppRegId, AppRegistration> = {
+const appRegPropsRoute: RouteSetup<AppRegId, AppRegistrationDTO> = {
     content: {
         type: "object",
         actions: [
@@ -53,7 +53,7 @@ const appRegPropsRoute: RouteSetup<AppRegId, AppRegistration> = {
         ],
         formTitle: (_, appReg) => appReg.displayName,
         requestObject: ids => Use(APIService).appregistrations._any_.get(ids.appRegId),
-        schema: OpenAPISchema("AppRegistration")
+        schema: OpenAPISchema("AppRegistrationDTO")
     },
     displayText: "Overview",
     icon: "app-indicator",
@@ -114,7 +114,7 @@ const claimsRoute: RouteSetup<AppRegId, ClaimVariable> = {
     routingKey: "claims",
 };
 
-const appRegRoute: RouteSetup<AppRegistration, AppRegId> = {
+const appRegRoute: RouteSetup<AppRegistrationDTO, AppRegId> = {
     content: {
         type: "multiPage",
         actions: [],

@@ -18,7 +18,7 @@
 
 import { RouteSetup } from "acfrontendex";
 import { APIService } from "../services/APIService";
-import { FullUserAccountData, HumanUserAccount } from "../../dist/api";
+import { FullUserAccountData, HumanUserAccount, UserAccountOverviewData } from "../../dist/api";
 import { OpenAPISchema } from "../api-info";
 import { Use } from "acfrontend";
 
@@ -42,7 +42,7 @@ export const userRoute: RouteSetup<{ userId: string }, FullUserAccountData> = {
                 deleteResource: ids => Use(APIService).users._any_.delete(ids.userId),
             }
         ],
-        formTitle: (_, user) => user.eMailAddress,
+        formTitle: (_, user) => (user.userAccount.type === "human") ? user.userAccount.eMailAddress : user.userAccount.externalId,
         requestObject: ids => Use(APIService).users._any_.get(ids.userId),
         schema: OpenAPISchema("FullUserAccountData")
     },
@@ -51,12 +51,12 @@ export const userRoute: RouteSetup<{ userId: string }, FullUserAccountData> = {
     routingKey: "{userId}",
 };
 
-export const usersRoute: RouteSetup<{}, HumanUserAccount> = {
+export const usersRoute: RouteSetup<{}, UserAccountOverviewData> = {
     content: {
         type: "collection",
         actions: [createUserRoute],
         child: userRoute,
-        id: "eMailAddress",
+        id: x => (x.type === "human") ? x.eMailAddress : x.externalId,
         requestObjects: () => Use(APIService).users.get(),
         schema: OpenAPISchema("HumanUserAccount"),
     },

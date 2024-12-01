@@ -21,12 +21,13 @@ import { UserAccountOverviewData, UserAccountsController } from "../data-access/
 import { ActiveDirectoryService } from "./ActiveDirectoryService";
 import { AuthenticationManager } from "./AuthenticationManager";
 import { PasswordValidationService } from "./PasswordValidationService";
+import { GroupsController } from "../data-access/GroupsController";
 
 @Injectable
 export class UsersManager
 {
     constructor(private userAccountsController: UserAccountsController, private activeDirectoryService: ActiveDirectoryService, private authManager: AuthenticationManager,
-        private passwordValidationService: PasswordValidationService
+        private passwordValidationService: PasswordValidationService, private groupsController: GroupsController,
     )
     {
     }
@@ -37,6 +38,22 @@ export class UsersManager
         await this.activeDirectoryService.CreateUser(userId);
 
         return userId;
+    }
+
+    public async DeleteUser(userId: number)
+    {
+        const groupIds = await this.groupsController.QueryGroupsUserIsMemberOf(userId);
+        for (const groupId of groupIds)
+            await this.RemoveMemberFromGroup(userId, groupId);
+
+        await this.activeDirectoryService.DeleteUser(userId);
+        await this.userAccountsController.Delete(userId);
+    }
+
+    public async RemoveMemberFromGroup(userId: number, userGroupId: number)
+    {
+        await this.activeDirectoryService.RemoveMemberFromGroup(userGroupId, userId);
+        await this.groupsController.RemoveMember(userGroupId, userId);
     }
 
     public async SetPassword(userId: number, newPassword: string)

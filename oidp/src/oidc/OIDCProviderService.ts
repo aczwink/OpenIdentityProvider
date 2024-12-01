@@ -24,6 +24,7 @@ import { allowedOrigins, CONFIG_SIGNING_KEY, port } from "../config";
 import { ClaimProviderService } from "../services/ClaimProviderService";
 import { ScopeEvaluationService } from "../services/ScopeEvaluationService";
 import { UserAccountsController } from "../data-access/UserAccountsController";
+import { AppRegistrationsController } from "../data-access/AppRegistrationsController";
 
 function CreateAdapter(name: string): Adapter
 {
@@ -51,24 +52,36 @@ const oidcConfig: Configuration = {
         return allowedOrigins.Contains(origin);
     },
 
-    clientDefaults: {
-        grant_types: ["authorization_code"]
-    },
-
-
     extraTokenClaims: async function(_, token)
     {
-        if(token.kind === "AccessToken")
+        let externalUserId;
+        if(token.kind === "ClientCredentials")
         {
-            const claimProviderService = GlobalInjector.Resolve(ClaimProviderService);
-            const provided = await claimProviderService.Provide(token.clientId!, token.accountId);
-            delete provided["scope"];
-            return provided;
+            const appRegistrationsController = GlobalInjector.Resolve(AppRegistrationsController);
+            const appReg = await appRegistrationsController.QueryByExternalId(token.clientId!);
+            const userId = appReg!.appUserId!;
+
+            const userAccountsController = GlobalInjector.Resolve(UserAccountsController);
+            const user = await userAccountsController.Query(userId);
+            if(user?.type !== "service-principal")
+                throw new Error("Should never happen");
+            externalUserId = user.externalId;
         }
+        else
+            externalUserId = token.accountId;
+        
+        const claimProviderService = GlobalInjector.Resolve(ClaimProviderService);
+        const provided = await claimProviderService.Provide(token.clientId!, externalUserId);
+        delete provided["scope"];
+        return provided;
     },
 
     features: {
         devInteractions: { enabled: false },
+
+        clientCredentials: {
+            enabled: true,
+        },
 
         resourceIndicators: {
             enabled: true,
@@ -106,13 +119,24 @@ const oidcConfig: Configuration = {
             {
                 const uac = GlobalInjector.Resolve(UserAccountsController);
                 const userId = await uac.QueryInternalId(sub);
-                const user = await uac.QueryByExternalId(sub);
+                const userEntry = await uac.QueryByExternalId(sub);
+                const user = userEntry!;
+
+                if(user.type === "human")
+                {
+                    return {
+                        sub: userId!.toString(), //sub must not be able to be mutated by user
+
+                        email: user.eMailAddress,
+                        given_name: user.givenName,
+                        name: user.givenName //TODO: UPN,
+                    };
+                }
+
                 return {
                     sub: userId!.toString(), //sub must not be able to be mutated by user
 
-                    email: user!.eMailAddress,
-                    given_name: user!.givenName,
-                    name: user!.givenName, //TODO: UPN,
+                    name: user.externalId
                 };
             },
         };

@@ -25,6 +25,12 @@ export interface DNSRecord
     value: string;
 }
 
+export interface DNSZone
+{
+    id: number;
+    name: string;
+}
+
 @Injectable
 export class DNSController
 {
@@ -33,29 +39,58 @@ export class DNSController
     }
 
     //Public methods
-    public async Create(record: DNSRecord)
+    public async CreateRecord(zoneId: number, record: DNSRecord)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        await conn.InsertRow("dnsrecords", record);
+        await conn.InsertRow("dnsrecords", {
+            zoneId,
+            ...record
+        });
     }
 
-    public async Delete(label: string)
+    public async CreateZone(name: string)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        await conn.DeleteRows("dnsrecords", "label = ?", label);
+        await conn.InsertRow("dnszones", { name });
     }
 
-    public async Query(label: string)
+    public async DeleteRecord(zoneId: number, label: string)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const row = await conn.SelectOne<DNSRecord>("SELECT * FROM dnsrecords WHERE label = ?", label);
+        await conn.DeleteRows("dnsrecords", "zoneId = ? AND label = ?", zoneId, label);
+    }
+
+    public async DeleteZone(zoneId: number)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.DeleteRows("dnszones", "id = ?", zoneId);
+    }
+
+    public async QueryRecord(zoneId: number, label: string)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const row = await conn.SelectOne<DNSRecord>("SELECT * FROM dnsrecords WHERE zoneId = ? AND label = ?", zoneId, label);
         return row;
     }
 
-    public async QueryAll()
+    public async QueryRecordsOfZone(zoneId: number)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const rows = await conn.Select<DNSRecord>("SELECT * FROM dnsrecords");
+        const rows = await conn.Select<DNSRecord>("SELECT * FROM dnsrecords WHERE zoneId = ?", zoneId);
+        return rows;
+    }
+
+    public async QueryZone(zoneId: number)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const row = await conn.SelectOne<DNSZone>("SELECT * FROM dnszones WHERE id = ?", zoneId);
+        return row;
+    }
+
+    public async QueryZones()
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const rows = await conn.Select<DNSZone>("SELECT * FROM dnszones");
         return rows;
     }
 }

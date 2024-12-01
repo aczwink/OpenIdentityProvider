@@ -23,7 +23,7 @@ import { RegisterCustomFormats } from "./presentation/custom-formats";
 import { devicesRoute } from "./routes/devices";
 
 import openAPIRoot from "../../oidp/dist/openapi.json";
-import { OpenAPI } from "../../../ACTS-Util/core/dist/main";
+import { OpenAPI } from "acts-util-core";
 import { dnsRoute } from "./routes/dns";
 import { changeUserPassword } from "./routes/own-user";
 import { domainRoute } from "./routes/domain";

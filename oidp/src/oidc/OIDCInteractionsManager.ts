@@ -41,7 +41,7 @@ export class OIDCInteractionsManager
     public async HandleAuth(interaction: Interaction, externalUserId: string, password: string): Promise<InteractionResults | InteractionError>
     {
         const userAccount = await this.userAccountsController.QueryByExternalId(externalUserId);
-        if(userAccount !== undefined)
+        if((userAccount !== undefined) && (userAccount.type === "human"))
         {
             const userId = await this.userAccountsController.QueryInternalId(externalUserId);
             const result = await this.authenticationManager.Authenticate(userId!, password);

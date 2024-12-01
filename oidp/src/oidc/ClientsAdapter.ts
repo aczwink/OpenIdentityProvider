@@ -38,10 +38,12 @@ export class ClientsAdapter implements Adapter
                 client_id: appReg.id,
                 client_name: appReg.displayName,
                 client_secret: appReg.clientSecret,
-                redirect_uris: appReg.redirectURIs,
-                token_endpoint_auth_method: "none",
+                grant_types: [appReg.type],
                 id_token_signed_response_alg: "ES256",
-                post_logout_redirect_uris: appReg.postLogoutRedirectURIs
+                post_logout_redirect_uris: appReg.postLogoutRedirectURIs,
+                redirect_uris: appReg.redirectURIs,
+                token_endpoint_auth_method: (appReg.type === "authorization_code") ? "none" : "client_secret_post",
+                response_types: (appReg.type === "authorization_code") ? ["code"] : [],
             };
         }
     }

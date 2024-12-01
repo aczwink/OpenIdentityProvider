@@ -23,15 +23,17 @@ import { ActiveDirectoryService, ActiveDirectoryUserNames } from "../services/Ac
 import { UsersManager } from "../services/UsersManager";
 import { Of } from "acts-util-core";
 
-interface FullUserAccountData extends UserAccountOverviewData, ActiveDirectoryUserNames
+interface FullUserAccountData
 {
-}
+    userAccount: UserAccountOverviewData;
+    ad: ActiveDirectoryUserNames
+};
 
 @APIController("users")
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api_
 {
-    constructor(private userAccountsController: UserAccountsController, private adService: ActiveDirectoryService, private usersManager: UsersManager)
+    constructor(private userAccountsController: UserAccountsController, private usersManager: UsersManager)
     {
     }
 
@@ -54,7 +56,7 @@ class _api_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api2_
 {
-    constructor(private userAccountsController: UserAccountsController, private adService: ActiveDirectoryService)
+    constructor(private userAccountsController: UserAccountsController, private adService: ActiveDirectoryService, private usersManager: UsersManager)
     {
     }
 
@@ -74,8 +76,7 @@ class _api2_
         @Common internalUserId: number
     )
     {
-        await this.adService.DeleteUser(internalUserId);
-        await this.userAccountsController.Delete(internalUserId);
+        await this.usersManager.DeleteUser(internalUserId);
     }
 
     @Get()
@@ -89,8 +90,8 @@ class _api2_
         const adNames = await this.adService.GetUserNames(internalUserId);
 
         return Of<FullUserAccountData>({
-            ...userAccount,
-            ...adNames
+            ad: adNames,
+            userAccount,
         });
     }
 }

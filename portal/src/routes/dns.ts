@@ -18,14 +18,16 @@
 
 import { RouteSetup } from "acfrontendex";
 import { APIService } from "../services/APIService";
-import { DNSRecord } from "../../dist/api";
+import { DNSRecord, DNSZone } from "../../dist/api";
 import { OpenAPISchema } from "../api-info";
 import { Use } from "acfrontend";
 
-const createRecordRoute: RouteSetup<{}, DNSRecord> = {
+type ZoneId = { zoneId: number; };
+
+const createRecordRoute: RouteSetup<ZoneId, DNSRecord> = {
     content: {
         type: "create",
-        call: (_, data) => Use(APIService).dns.post(data),
+        call: (ids, data) => Use(APIService).dns._any_.post(ids.zoneId, data),
         schema: OpenAPISchema("DNSRecord")
     },
     displayText: "Create record",
@@ -33,20 +35,77 @@ const createRecordRoute: RouteSetup<{}, DNSRecord> = {
     routingKey: "create",
 };
 
-export const dnsRoute: RouteSetup<{}, DNSRecord> = {
+const dnsRecordsRoute: RouteSetup<ZoneId, DNSRecord> = {
     content: {
         type: "list",
         actions: [createRecordRoute],
         boundActions: [
             {
                 type: "delete",
-                deleteResource: (_, record) => Use(APIService).dns._any_.delete(record.label),
+                deleteResource: (ids, record) => Use(APIService).dns._any_._any_.delete(ids.zoneId, record.label),
             }
         ],
-        requestObjects: () => Use(APIService).dns.get(),
+        requestObjects: ids => Use(APIService).dns._any_.get(ids.zoneId),
         schema: OpenAPISchema("DNSRecord")
     },
-    displayText: "DNS",
+    displayText: "DNS Records",
+    icon: "postcard",
+    routingKey: "records",
+};
+
+const dnsZoneRoute: RouteSetup<ZoneId, DNSZone> = {
+    content: {
+        type: "multiPage",
+        actions: [
+            {
+                type: "delete",
+                deleteResource: ids => Use(APIService).dns._any_.delete(ids.zoneId),
+            }
+        ],
+        entries: [
+            {
+                displayName: "",
+                entries: [dnsRecordsRoute]
+            }
+        ],
+        formTitle: _ => "DNS zone",
+    },
+    displayText: "DNS zone",
+    icon: "postcard",
+    routingKey: "{zoneId}",
+};
+
+
+const createZoneRoute: RouteSetup<{}, { name: string; }> = {
+    content: {
+        type: "create",
+        call: (_, data) => Use(APIService).dns.post(data),
+        schema: {
+            additionalProperties: false,
+            properties: {
+                name: {
+                    type: "string"
+                },
+            },
+            required: ["name"],
+            type: "object",
+        }
+    },
+    displayText: "Create zone",
+    icon: "plus",
+    routingKey: "create",
+};
+
+export const dnsRoute: RouteSetup<{}, DNSZone> = {
+    content: {
+        type: "collection",
+        actions: [createZoneRoute],
+        child: dnsZoneRoute,
+        id: "id",
+        requestObjects: () => Use(APIService).dns.get(),
+        schema: OpenAPISchema("DNSZone")
+    },
+    displayText: "DNS zones",
     icon: "postcard",
     requiredScopes: ["admin"],
     routingKey: "dns",

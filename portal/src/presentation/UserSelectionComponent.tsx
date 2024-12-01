@@ -18,6 +18,7 @@
 
 import { Injectable, Component, ProgressSpinner, AutoCompleteSelectBox, JSX_CreateElement } from "acfrontend";
 import { APIService } from "../services/APIService";
+import { UserAccountOverviewData } from "../../dist/api";
 
 interface UserSelectionInput
 {
@@ -37,7 +38,6 @@ export class UserSelectionComponent extends Component<UserSelectionInput>
     
     protected Render(): RenderValue
     {
-        console.log(this.selectedUserName, this.input.userId);
         if( (this.input.userId !== null) && (this.selectedUserName === null) )
             return <ProgressSpinner />;
 
@@ -51,11 +51,33 @@ export class UserSelectionComponent extends Component<UserSelectionInput>
     private selectedUserName: string | null;
 
     //Private methods
+    private FilterUser(searchText: string, user: UserAccountOverviewData)
+    {
+        switch(user.type)
+        {
+            case "human":
+                return user.givenName.includes(searchText);
+            case "service-principal":
+                return user.displayName.includes(searchText);
+        }
+    }
+
     private async LoadUsers(searchText: string)
     {
         const users = (await this.apiService.users.get()).data;
 
-        return users.Values().Filter(x => x.eMailAddress.includes(searchText)).Map(x => ({ key: x.eMailAddress, displayValue: x.eMailAddress })).ToArray();
+        return users.Values().Filter(this.FilterUser.bind(this, searchText)).Map(this.MapUser.bind(this)).ToArray();
+    }
+
+    private MapUser(user: UserAccountOverviewData)
+    {
+        switch(user.type)
+        {
+            case "human":
+                return { key: user.eMailAddress, displayValue: user.givenName };
+            case "service-principal":
+                return { key: user.externalId, displayValue: user.displayName };
+        }
     }
 
     private async ReloadUserName()
@@ -63,9 +85,14 @@ export class UserSelectionComponent extends Component<UserSelectionInput>
         this.selectedUserName = null;
         if(this.input.userId !== null)
         {
+            if(this.input.userId.trim().length === 0)
+            {
+                this.input.valueChanged(null);
+                return;
+            }
             const response = await this.apiService.users._any_.get(this.input.userId);
             if(response.statusCode === 200)
-                this.selectedUserName = response.data.eMailAddress;
+                this.selectedUserName = (response.data.userAccount.type === "human") ? response.data.userAccount.givenName : response.data.userAccount.displayName;
             else
                 this.input.valueChanged(null);
         }
