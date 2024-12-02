@@ -20,11 +20,12 @@ import { GlobalInjector, Injectable } from "acts-util-node";
 import Provider, { Adapter, Configuration } from 'oidc-provider';
 import { ClientsAdapter } from "./ClientsAdapter";
 import { MemoryAdapter } from "./MemoryAdapter";
-import { allowedOrigins, CONFIG_SIGNING_KEY, port } from "../config";
+import { allowedOrigins, port } from "../config";
 import { ClaimProviderService } from "../services/ClaimProviderService";
 import { ScopeEvaluationService } from "../services/ScopeEvaluationService";
 import { UserAccountsController } from "../data-access/UserAccountsController";
 import { AppRegistrationsController } from "../data-access/AppRegistrationsController";
+import { PKIManager } from "../services/PKIManager";
 
 function CreateAdapter(name: string): Adapter
 {
@@ -142,9 +143,7 @@ const oidcConfig: Configuration = {
         };
     },
 
-    jwks: {
-        keys: [CONFIG_SIGNING_KEY]
-    },
+    jwks: await GlobalInjector.Resolve(PKIManager).LoadSigningKeys(),
 
     renderError: function(ctx, errorOut, error)
     {

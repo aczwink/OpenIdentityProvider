@@ -15,21 +15,31 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-export const allowedOrigins = ["http://localhost:8081"];
-export const port = 3000;
+import child_process from "child_process";
+import { Injectable } from "acts-util-node";
 
-export const CONFIG_DB = {
-    host: process.env.OIDP_DBHOST!,
-    user: process.env.OIDP_DBUSER!,
-    password: process.env.OIDP_DBPW!,
-};
+@Injectable
+export class CommandExecutor
+{
+    public Exec(command: string[], workingDirectory?: string)
+    {
+        const line = command.map(this.EscapeCommandArg.bind(this)).join(" ");
 
-export const CONFIG_SERVICE_DOMAINNAME = process.env.OIDP_DOMAIN!;
+        return new Promise<string>( (resolve, reject) => {
+            child_process.exec(line, { cwd: workingDirectory }, (error, stdout) => {
+                if(error)
+                    reject(error);
+                else
+                    resolve(stdout);
+            });
+        });
+    }
 
-export const CONFIG_AD_DOMAIN = {
-    dnsForwarderIP: process.env.OIDP_DNSFORWARDERIP!,
-    domain: process.env.OIDP_ADDOMAIN!,
-    dcIP_Address: process.env.OIDP_DCIP
-};
-
-export const CONFIG_STORAGE_ROOT_DIR = "/srv/OpenIdentityProvider";
+    //Private methods
+    private EscapeCommandArg(arg: string)
+    {
+        if(arg.includes(' '))
+            return '"' + arg + '"';
+        return arg;
+    }
+}

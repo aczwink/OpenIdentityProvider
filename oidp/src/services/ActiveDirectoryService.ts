@@ -20,11 +20,12 @@ import os from "os";
 import child_process from "child_process";
 import { Injectable } from "acts-util-node";
 import { UserAccountsController } from "../data-access/UserAccountsController";
-import { CONFIG_DOMAIN } from "../config";
+import { CONFIG_AD_DOMAIN } from "../config";
 import { DNSRecord, DNSZone } from "../data-access/DNSController";
 import { ConfigController } from "../data-access/ConfigController";
 import { Of } from "acts-util-core";
 import { GroupsController } from "../data-access/GroupsController";
+import { CommandExecutor } from "./CommandExecutor";
 
 export interface ActiveDirectoryUserNames
 {
@@ -49,7 +50,9 @@ const initialAdminPW = "AdminPW1234!";
 @Injectable
 export class ActiveDirectoryService
 {
-    constructor(private userAccountsController: UserAccountsController, private configController: ConfigController, private groupsController: GroupsController)
+    constructor(private userAccountsController: UserAccountsController, private configController: ConfigController, private groupsController: GroupsController,
+        private commandExecutor: CommandExecutor
+    )
     {
     }
 
@@ -58,7 +61,7 @@ export class ActiveDirectoryService
     {
         const group_sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
 
-        await this.Exec(["samba-tool", "group", "addmembers", "Domain Admins", group_sAMAccountName]);
+        await this.commandExecutor.Exec(["samba-tool", "group", "addmembers", "Domain Admins", group_sAMAccountName]);
     }
 
     public async AddMemberToGroup(userGroupId: number, userId: number)
@@ -66,7 +69,7 @@ export class ActiveDirectoryService
         const group_sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
         const user_sAMAccountName = await this.MapToUser_sAMAccountName(userId);
 
-        await this.Exec(["samba-tool", "group", "addmembers", group_sAMAccountName, user_sAMAccountName]);
+        await this.commandExecutor.Exec(["samba-tool", "group", "addmembers", group_sAMAccountName, user_sAMAccountName]);
     }
 
     public async CreateDNSRecord(zone: DNSZone, record: DNSRecord)
@@ -85,7 +88,7 @@ export class ActiveDirectoryService
     {
         const sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
 
-        await this.Exec([
+        await this.commandExecutor.Exec([
             "samba-tool", "group", "add",
             sAMAccountName,
         ]);
@@ -107,7 +110,7 @@ export class ActiveDirectoryService
             );
         }
 
-        await this.Exec([
+        await this.commandExecutor.Exec([
             "samba-tool", "user", "add",
             sAMAccountName,
             "--random-password",
@@ -131,7 +134,7 @@ export class ActiveDirectoryService
     {
         const sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
 
-        await this.Exec([
+        await this.commandExecutor.Exec([
             "samba-tool", "group", "delete",
             sAMAccountName,
         ]);
@@ -140,7 +143,7 @@ export class ActiveDirectoryService
     public async DeleteUser(userId: number)
     {
         const sAMAccountName = await this.MapToUser_sAMAccountName(userId);
-        await this.Exec(["samba-tool", "user", "delete", sAMAccountName]);
+        await this.commandExecutor.Exec(["samba-tool", "user", "delete", sAMAccountName]);
     }
 
     public async GetUserNames(userId: number)
@@ -148,9 +151,9 @@ export class ActiveDirectoryService
         const sAMAccountName = await this.MapToUser_sAMAccountName(userId);
 
         return Of<ActiveDirectoryUserNames>({
-            netBiosName: CONFIG_DOMAIN.domain.split(".")[0].toUpperCase() + "\\" + sAMAccountName,
+            netBiosName: CONFIG_AD_DOMAIN.domain.split(".")[0].toUpperCase() + "\\" + sAMAccountName,
             sAMAccountName,
-            userPrincipalName: sAMAccountName + "@" + CONFIG_DOMAIN.domain
+            userPrincipalName: sAMAccountName + "@" + CONFIG_AD_DOMAIN.domain
         });
     }
 
@@ -158,12 +161,12 @@ export class ActiveDirectoryService
     {
         const adInitProcess = child_process.spawn("/init.sh", {
             env: {
-                DNSFORWARDER: CONFIG_DOMAIN.dnsForwarderIP,
-                DOMAIN: CONFIG_DOMAIN.domain.toUpperCase(),
-                DOMAIN_DC: CONFIG_DOMAIN.domain.split(".").map(x => "dc=" + x).join(","),
-                DOMAIN_EMAIL: CONFIG_DOMAIN.domain,
+                DNSFORWARDER: CONFIG_AD_DOMAIN.dnsForwarderIP,
+                DOMAIN: CONFIG_AD_DOMAIN.domain.toUpperCase(),
+                DOMAIN_DC: CONFIG_AD_DOMAIN.domain.split(".").map(x => "dc=" + x).join(","),
+                DOMAIN_EMAIL: CONFIG_AD_DOMAIN.domain,
                 DOMAINPASS: initialAdminPW,
-                HOSTIP: CONFIG_DOMAIN.dcIP_Address,
+                HOSTIP: CONFIG_AD_DOMAIN.dcIP_Address,
                 NOCOMPLEXITY: "true" //passwords are managed via OIDP
             },
         });
@@ -175,13 +178,13 @@ export class ActiveDirectoryService
 
     public async ListComputers()
     {
-        const stdout = await this.Exec(["samba-tool", "computer", "list"])
+        const stdout = await this.commandExecutor.Exec(["samba-tool", "computer", "list"])
         return stdout.trim().split("\n");
     }
 
     public async FetchComputerDetails(computerName: string)
     {
-        const stdout = await this.Exec(["samba-tool", "computer", "show", computerName])
+        const stdout = await this.commandExecutor.Exec(["samba-tool", "computer", "show", computerName])
         const lines = stdout.trim().split("\n");
         const kvs = lines.Values().Map(x => {
             const idx = x.indexOf(":");
@@ -200,7 +203,7 @@ export class ActiveDirectoryService
     {
         const group_sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
 
-        await this.Exec(["samba-tool", "group", "removemembers", "Domain Admins", group_sAMAccountName]);
+        await this.commandExecutor.Exec(["samba-tool", "group", "removemembers", "Domain Admins", group_sAMAccountName]);
     }
 
     public async RemoveMemberFromGroup(userGroupId: number, userId: number)
@@ -208,7 +211,7 @@ export class ActiveDirectoryService
         const group_sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
         const user_sAMAccountName = await this.MapToUser_sAMAccountName(userId);
 
-        await this.Exec(["samba-tool", "group", "removemembers", group_sAMAccountName, user_sAMAccountName]);
+        await this.commandExecutor.Exec(["samba-tool", "group", "removemembers", group_sAMAccountName, user_sAMAccountName]);
     }
 
     public async SetUserPassword(userId: number, newPassword: string)
@@ -218,26 +221,6 @@ export class ActiveDirectoryService
     }
 
     //Private methods
-    private EscapeCommandArg(arg: string)
-    {
-        if(arg.includes(' '))
-            return '"' + arg + '"';
-        return arg;
-    }
-    private Exec(command: string[])
-    {
-        const line = command.map(this.EscapeCommandArg.bind(this)).join(" ");
-
-        return new Promise<string>( (resolve, reject) => {
-            child_process.exec(line, (error, stdout) => {
-                if(error)
-                    reject(error);
-                else
-                    resolve(stdout);
-            });
-        });
-    }
-
     private async ExecWithLogin(command: string[])
     {
         const line = command.join(" ");
@@ -284,7 +267,7 @@ export class ActiveDirectoryService
 
     private GetDomainControllerDomainName()
     {
-        return os.hostname() + "." + CONFIG_DOMAIN.domain;
+        return os.hostname() + "." + CONFIG_AD_DOMAIN.domain;
     }
 
     private GetUserNamingStrategy(): "firstName"
@@ -324,6 +307,6 @@ export class ActiveDirectoryService
     private async SetUserPasswordInternal(sAMAccountName: string, newPassword: string)
     {
         //there is currently no better option that this. The stdin method does not work reliably
-        await this.Exec(["samba-tool", "user", "setpassword", sAMAccountName, "--newpassword=" + newPassword]);
+        await this.commandExecutor.Exec(["samba-tool", "user", "setpassword", sAMAccountName, "--newpassword=" + newPassword]);
     }
 }

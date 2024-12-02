@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-import crypto from "crypto";
 import express from "express";
 import fs from "fs";
 import https from "https";
@@ -23,12 +22,13 @@ import path from "path";
 import "acts-util-core";
 import { interactionsRouter } from "./oidc/interactions";
 import { Factory, GlobalInjector, HTTP } from "acts-util-node";
-import { allowedOrigins, CONFIG_SIGNING_KEY, port } from "./config";
+import { allowedOrigins, port } from "./config";
 import { OIDCProviderService } from "./oidc/OIDCProviderService";
 import { OpenAPI } from 'acts-util-core';
 import { APIRegistry } from 'acts-util-apilib';
 import { ActiveDirectoryService } from "./services/ActiveDirectoryService";
 import { UsersManager } from "./services/UsersManager";
+import { PKIManager } from "./services/PKIManager";
 
 async function BootstrapServer()
 {
@@ -38,12 +38,11 @@ async function BootstrapServer()
     requestHandlerChain.AddCORSHandler(allowedOrigins);
     requestHandlerChain.AddBodyParser();
 
+    const pki = GlobalInjector.Resolve(PKIManager);
+
     requestHandlerChain.AddRequestHandler(
         new HTTP.JWTVerifier(
-            crypto.createPublicKey({
-                key: CONFIG_SIGNING_KEY,
-                format: 'jwk'
-            }),
+            await pki.LoadSigningKeys(),
             "http://localhost:3000", //TODO WHY HTTP AND NOT HTTPS?
             false
         )
@@ -65,9 +64,10 @@ async function BootstrapServer()
     requestHandlerChain.AddThirdPartyHandler(interactionsRouter);
     requestHandlerChain.AddThirdPartyHandler(GlobalInjector.Resolve(OIDCProviderService).provider.callback());
 
+    const keyPair = await pki.LoadServiceKeyPair();
     const server = https.createServer({
-        key: fs.readFileSync("/srv/OpenIdentityProvider/private.key"),
-        cert: fs.readFileSync("/srv/OpenIdentityProvider/public.crt")
+        key: keyPair.privateKey,
+        cert: keyPair.publicKey
     }, requestHandlerChain.requestListener);
 
     server.listen(port, () => {
