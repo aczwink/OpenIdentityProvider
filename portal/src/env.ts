@@ -15,28 +15,13 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-import { Injectable, HTTPService, OAuth2TokenManager, APIServiceBase } from "acfrontend";
-import { API } from "../../dist/api";
-import ENV from "../env";
 
-@Injectable
-export class APIService extends API
-{
-    constructor(httpService: HTTPService, oAuth2TokenManager: OAuth2TokenManager)
-    {
-        super( req => this.base.SendRequest(req) );
-
-        this.base = new APIServiceBase(httpService, ENV.BACKEND, parseInt(ENV.BACKEND_PORT), "https");
-
-        oAuth2TokenManager.tokenIssued.Subscribe(x => this.accessToken = x.accessToken);
-    }
-
-    //Private properties
-    private set accessToken(value: string)
-    {
-        this.base.globalHeaders.Authorization = "Bearer " + value;
-    }
-
-    //State
-    private base: APIServiceBase;
-}
+export default {
+    AUTH_ENDPOINT: process.env.OIDP_AUTH_ENDPOINT!,
+    BACKEND: process.env.OIDP_BACKEND!,
+    BACKEND_PORT: process.env.OIDP_BACKEND_PORT!,
+    CLIENT_ID: process.env.OIDP_CLIENTID!,
+    ENDSESSION_ENDPOINT: process.env.OIDP_ENDSESSION_ENDPOINT!,
+    FRONTEND_BASEURL: process.env.OIDP_FRONTEND_BASEURL!,
+    TOKEN_ENDPOINT: process.env.OIDP_TOKEN_ENDPOINT!,
+};

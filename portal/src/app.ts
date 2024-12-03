@@ -21,25 +21,24 @@ import { userGroupsRoutes } from "./routes/groups";
 import { appRegistrationsRoutes } from "./routes/app-registrations";
 import { RegisterCustomFormats } from "./presentation/custom-formats";
 import { devicesRoute } from "./routes/devices";
-
 import openAPIRoot from "../../oidp/dist/openapi.json";
 import { OpenAPI } from "acts-util-core";
 import { dnsRoute } from "./routes/dns";
 import { changeUserPassword } from "./routes/own-user";
 import { domainRoute } from "./routes/domain";
+import ENV from "./env";
 
 RegisterCustomFormats();
-
 
 BootstrapApp({
     features: {
         oAuth2: {
-            authorizeEndpoint: process.env.OIDP_AUTH_ENDPOINT!,
-            clientId: process.env.OIDP_CLIENTID!,
-            endSessionEndpoint: process.env.OIDP_ENDSESSION_ENDPOINT!,
+            authorizeEndpoint: ENV.AUTH_ENDPOINT,
+            clientId: ENV.CLIENT_ID,
+            endSessionEndpoint: ENV.ENDSESSION_ENDPOINT,
             flow: "authorizationCode",
-            tokenEndpoint: process.env.OIDP_TOKEN_ENDPOINT!,
-            ...CreateOAuth2RedirectURIs(process.env.OIDP_FRONTEND_BASEURL!),
+            tokenEndpoint: ENV.TOKEN_ENDPOINT,
+            ...CreateOAuth2RedirectURIs(ENV.FRONTEND_BASEURL),
         },
 
         OIDC: true,

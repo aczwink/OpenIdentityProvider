@@ -6,7 +6,7 @@
   "scripts": {
     "generate-api": "npx acts-util-apilib",
     "start-dev": "webpack serve --open",
-    "build": "npx webpack",
+    "build": "npx webpack --config webpack.config.production.js",
     "build-docker-image": "npm run build && docker build -t oidp-portal ."
   },
   "keywords": [],

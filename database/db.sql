@@ -153,6 +153,20 @@ CREATE TABLE `groups_members` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `pki`
+--
+
+DROP TABLE IF EXISTS `pki`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `pki` (
+  `name` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `value` blob NOT NULL,
+  PRIMARY KEY (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `users`
 --
 
@@ -193,4 +207,4 @@ CREATE TABLE `users_clientSecrets` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-12-01 21:12:33
+-- Dump completed on 2024-12-03 22:23:23
