@@ -53,11 +53,10 @@ export class AppRegistrationsController
     }
 
     //Public methods
-    public async Create(data: AppRegistrationRecord)
+    public async Create(externalId: string, data: AppRegistrationRecord)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const externalId = crypto.randomUUID();
-        await conn.InsertRow("appregistrations", {
+        const result = await conn.InsertRow("appregistrations", {
             externalId,
             secret: crypto.randomBytes(64).toString("hex"),
             type: data.type,
@@ -67,7 +66,7 @@ export class AppRegistrationsController
             appUserId: data.appUserId
         });
 
-        return externalId as string;
+        return result.insertId;
     }
 
     public async DeleteByExternalId(externalId: string)

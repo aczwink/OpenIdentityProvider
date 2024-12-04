@@ -22,7 +22,7 @@ import { CreateTempDir, Injectable } from "acts-util-node";
 import { JWK } from "node-jose";
 import { PKIController } from "../data-access/PKIController";
 import { CommandExecutor } from "./CommandExecutor";
-import { CONFIG_SERVICE_DOMAINNAME } from "../config";
+import { CONFIG_OIDC } from "../env";
 
 interface Request
 {
@@ -47,7 +47,7 @@ export class PKIManager
         const oidp = await this.ReadKeyPair("oidp");
         if(oidp === undefined)
         {
-            const req = await this.CreateRequest(CONFIG_SERVICE_DOMAINNAME);
+            const req = await this.CreateRequest(CONFIG_OIDC.domain);
             await this.SignRequest(req);
 
             const key = await fs.promises.readFile(req.keyPath, "utf-8");

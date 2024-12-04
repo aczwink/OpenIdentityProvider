@@ -16,26 +16,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 import express from "express";
-import fs from "fs";
 import https from "https";
 import path from "path";
 import "acts-util-core";
 import { interactionsRouter } from "./oidc/interactions";
 import { Factory, GlobalInjector, HTTP } from "acts-util-node";
-import { allowedOrigins, port } from "./config";
+import { CONFIG_OIDC } from "./env";
 import { OIDCProviderService } from "./oidc/OIDCProviderService";
 import { OpenAPI } from 'acts-util-core';
 import { APIRegistry } from 'acts-util-apilib';
 import { ActiveDirectoryService } from "./services/ActiveDirectoryService";
 import { UsersManager } from "./services/UsersManager";
 import { PKIManager } from "./services/PKIManager";
+import { PasswordValidationService } from "./services/PasswordValidationService";
+import { UserGroupsManager } from "./services/UserGroupsManager";
+import { AppRegistrationsController } from "./data-access/AppRegistrationsController";
+import { ClaimsController } from "./data-access/ClaimsController";
+import { SCOPE_ADMIN } from "./api_security";
 
 async function BootstrapServer()
 {
     GlobalInjector.Resolve(ActiveDirectoryService).Initialize(); //start samba AD early
 
     const requestHandlerChain = Factory.CreateRequestHandlerChain();
-    requestHandlerChain.AddCORSHandler(allowedOrigins);
+    requestHandlerChain.AddCORSHandler(CONFIG_OIDC.allowedOrigins);
     requestHandlerChain.AddBodyParser();
 
     const pki = GlobalInjector.Resolve(PKIManager);
@@ -43,7 +47,7 @@ async function BootstrapServer()
     requestHandlerChain.AddRequestHandler(
         new HTTP.JWTVerifier(
             await pki.LoadSigningKeys(),
-            "http://localhost:3000", //TODO WHY HTTP AND NOT HTTPS?
+            "https://" + CONFIG_OIDC.domain + ":" + CONFIG_OIDC.port,
             false
         )
     );
@@ -70,8 +74,9 @@ async function BootstrapServer()
         cert: keyPair.publicKey
     }, requestHandlerChain.requestListener);
 
+    const port = CONFIG_OIDC.port;
     server.listen(port, () => {
-        console.log('oidc-provider listening on port ' + port + ', check https://localhost:' + port + '/.well-known/openid-configuration');
+        console.log('oidc-provider listening on port ' + port + ', check https://' + CONFIG_OIDC.domain + ':' + port + '/.well-known/openid-configuration');
     });
 
     process.on('SIGINT', function()
@@ -91,7 +96,7 @@ async function ExecMgmtCommand(command: string, args: string[])
 {
     switch(command)
     {
-        case "create-user":
+        case "bootstrap":
         {
             if(args.length !== 2)
             {
@@ -101,6 +106,14 @@ async function ExecMgmtCommand(command: string, args: string[])
 
             const eMailAddress = args[0];
             const password = args[1];
+
+            const passwordValidationService = GlobalInjector.Resolve(PasswordValidationService);
+            const result = passwordValidationService.Validate(password);
+            if(result !== undefined)
+            {
+                console.log("Password not valid: " + result)
+                return;
+            }
 
             const usersManager = GlobalInjector.Resolve(UsersManager);
             const userId = await usersManager.CreateUser({
@@ -113,6 +126,31 @@ async function ExecMgmtCommand(command: string, args: string[])
                 console.log("Error while setting users password: ", error);
             else
                 console.log("User", eMailAddress, "was created successfully.");
+
+            const userGroupsManager = GlobalInjector.Resolve(UserGroupsManager);
+            const groupId = await userGroupsManager.Create({ name: "Admins" });
+            await userGroupsManager.AddMember(groupId, userId);
+
+            const appRegistrationsController = GlobalInjector.Resolve(AppRegistrationsController);
+            const appRegId = await appRegistrationsController.Create("OIDP_PORTAL", {
+                appUserId: null,
+                displayName: "OpenIdentityProvider Portal",
+                postLogoutRedirectURIs: ["http://localhost:8081/oauth2loggedout"],
+                redirectURIs: ["http://localhost:8081/oauth2loggedin"],
+                type: "authorization_code",
+            });
+
+            const claimsController = GlobalInjector.Resolve(ClaimsController);
+            const claimId = await claimsController.AddVariable(appRegId, {
+                claimName: "scope",
+                claimType: "string-list-space-separated"
+            });
+            await claimsController.AddValue(claimId, { groupId, value: "openid" });
+            await claimsController.AddValue(claimId, { groupId, value: "email" });
+            await claimsController.AddValue(claimId, { groupId, value: "profile" });
+            await claimsController.AddValue(claimId, { groupId, value: SCOPE_ADMIN });
+
+            console.log("Initial configuration complete :)");
         }
         break;
         default:

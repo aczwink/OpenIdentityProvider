@@ -59,10 +59,12 @@ export class ClaimsController
     public async AddVariable(appRegistrationId: number, data: ClaimVariableProperties)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        await conn.InsertRow("appregistrations_claims", {
+        const result = await conn.InsertRow("appregistrations_claims", {
             appRegistrationId,
             ...data
         });
+
+        return result.insertId;
     }
 
     public async DeleteValue(claimId: number, claimValue: ClaimValue)

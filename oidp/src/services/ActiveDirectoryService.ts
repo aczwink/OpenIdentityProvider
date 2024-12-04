@@ -20,7 +20,7 @@ import os from "os";
 import child_process from "child_process";
 import { Injectable } from "acts-util-node";
 import { UserAccountsController } from "../data-access/UserAccountsController";
-import { CONFIG_AD_DOMAIN } from "../config";
+import { CONFIG_AD_DOMAIN } from "../env";
 import { DNSRecord, DNSZone } from "../data-access/DNSController";
 import { ConfigController } from "../data-access/ConfigController";
 import { Of } from "acts-util-core";

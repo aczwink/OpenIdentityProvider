@@ -20,7 +20,7 @@ import { GlobalInjector, Injectable } from "acts-util-node";
 import Provider, { Adapter, Configuration } from 'oidc-provider';
 import { ClientsAdapter } from "./ClientsAdapter";
 import { MemoryAdapter } from "./MemoryAdapter";
-import { allowedOrigins, port } from "../config";
+import { CONFIG_OIDC } from "../env";
 import { ClaimProviderService } from "../services/ClaimProviderService";
 import { ScopeEvaluationService } from "../services/ScopeEvaluationService";
 import { UserAccountsController } from "../data-access/UserAccountsController";
@@ -50,7 +50,7 @@ const oidcConfig: Configuration = {
 
     clientBasedCORS(ctx, origin, client)
     {
-        return allowedOrigins.Contains(origin);
+        return CONFIG_OIDC.allowedOrigins.Contains(origin);
     },
 
     extraTokenClaims: async function(_, token)
@@ -89,7 +89,7 @@ const oidcConfig: Configuration = {
 
             defaultResource(ctx, client, oneOf)
             {
-                return "localhost:3000";
+                return CONFIG_OIDC.domain + ":" + CONFIG_OIDC.port;
             },
 
             async getResourceServerInfo(ctx, resourceIndicator, client)
@@ -168,7 +168,7 @@ export class OIDCProviderService
 {
     constructor()
     {
-        this._provider = new Provider('http://localhost:' + port, oidcConfig);
+        this._provider = new Provider('https://' + CONFIG_OIDC.domain +  ':' + CONFIG_OIDC.port, oidcConfig);
     }
 
     //Properties

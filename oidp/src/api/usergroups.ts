@@ -22,12 +22,13 @@ import { GroupsController, UserGroupProperties } from "../data-access/GroupsCont
 import { UserAccountsController } from "../data-access/UserAccountsController";
 import { ActiveDirectoryService } from "../services/ActiveDirectoryService";
 import { UsersManager } from "../services/UsersManager";
+import { UserGroupsManager } from "../services/UserGroupsManager";
 
 @APIController("usergroups")
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api_
 {
-    constructor(private groupsController: GroupsController, private activeDirectoryService: ActiveDirectoryService)
+    constructor(private groupsController: GroupsController, private userGroupsManager: UserGroupsManager)
     {
     }
 
@@ -36,9 +37,7 @@ class _api_
         @Body props: UserGroupProperties
     )
     {
-        const groupId = await this.groupsController.Create(props);
-        await this.activeDirectoryService.CreateGroup(groupId);
-        return groupId;
+        return this.userGroupsManager.Create(props);
     }
 
     @Get()
@@ -78,8 +77,7 @@ class _api2_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api3_
 {
-    constructor(private userAccountsController: UserAccountsController, private groupsController: GroupsController, private activeDirectoryService: ActiveDirectoryService,
-        private usersManager: UsersManager
+    constructor(private userAccountsController: UserAccountsController, private usersManager: UsersManager, private userGroupsManager: UserGroupsManager
     )
     {
     }
@@ -113,7 +111,6 @@ class _api3_
         const internalUserId = await this.userAccountsController.QueryInternalId(userId);
         if(internalUserId === undefined)
             return NotFound("user not found");
-        await this.groupsController.AddMember(userGroupId, internalUserId);
-        await this.activeDirectoryService.AddMemberToGroup(userGroupId, internalUserId);
+        await this.userGroupsManager.AddMember(userGroupId, internalUserId);
     }
 }

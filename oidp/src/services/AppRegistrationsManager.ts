@@ -32,11 +32,12 @@ export class AppRegistrationsManager
     {
         const appUserId = await this.EnsureServicePrincipalExistsIfRequired(props);
 
-        const result = await this.appRegistrationsController.Create({
+        const externalId = crypto.randomUUID();
+        await this.appRegistrationsController.Create(externalId, {
             ...props,
             appUserId,
         });
-        return result;
+        return externalId as string;
     }
 
     public async DeleteByExternalId(appRegId: string)

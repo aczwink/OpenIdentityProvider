@@ -15,8 +15,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-export const allowedOrigins = ["http://localhost:8081"];
-export const port = 3000;
 
 export const CONFIG_DB = {
     host: process.env.OIDP_DBHOST!,
@@ -24,11 +22,15 @@ export const CONFIG_DB = {
     password: process.env.OIDP_DBPW!,
 };
 
-export const CONFIG_SERVICE_DOMAINNAME = process.env.OIDP_DOMAIN!;
+export const CONFIG_OIDC = {
+    allowedOrigins: [process.env.OIDP_ALLOWED_ORIGIN!],
+    domain: process.env.OIDP_DOMAIN!,
+    port: parseInt(process.env.OIDP_PORT!),
+};
 
 export const CONFIG_AD_DOMAIN = {
     dnsForwarderIP: process.env.OIDP_DNSFORWARDERIP!,
-    domain: process.env.OIDP_ADDOMAIN!,
+    domain: process.env.OIDP_AD_DOMAIN!,
     dcIP_Address: process.env.OIDP_DCIP
 };
 
