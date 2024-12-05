@@ -307,6 +307,6 @@ export class ActiveDirectoryService
     private async SetUserPasswordInternal(sAMAccountName: string, newPassword: string)
     {
         //there is currently no better option that this. The stdin method does not work reliably
-        await this.commandExecutor.Exec(["samba-tool", "user", "setpassword", sAMAccountName, "--newpassword=" + newPassword]);
+        await this.commandExecutor.Exec(["samba-tool", "user", "setpassword", sAMAccountName, '--newpassword="' + newPassword + '"']);
     }
 }

@@ -6,10 +6,13 @@ module.exports = {
         minimize: false //unfortunately mysqljs requires this
     },
 
-    entry: "./src/main.ts",
+    entry: {
+        app: "./src/main.ts",
+        management: "./src/cli.ts",
+    },
     output: {
         path: __dirname + "/dist",
-        filename: "bundle.js",
+        filename: "[name].js",
     },
     
     resolve: {

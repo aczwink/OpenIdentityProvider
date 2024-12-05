@@ -13,5 +13,5 @@ ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
 RUN apt clean autoclean && apt autoremove --yes && rm -rf /var/lib/{apt,dpkg,cache,log}/ && rm -rf /tmp/* /var/tmp/*
 
 COPY ./src/views ./views
-COPY ./dist/*bundle.js ./
-CMD [ "node", "bundle.js" ]
+COPY ./dist/*.js ./
+CMD [ "node", "app.js" ]

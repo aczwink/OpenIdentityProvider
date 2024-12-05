@@ -26,13 +26,7 @@ import { OIDCProviderService } from "./oidc/OIDCProviderService";
 import { OpenAPI } from 'acts-util-core';
 import { APIRegistry } from 'acts-util-apilib';
 import { ActiveDirectoryService } from "./services/ActiveDirectoryService";
-import { UsersManager } from "./services/UsersManager";
 import { PKIManager } from "./services/PKIManager";
-import { PasswordValidationService } from "./services/PasswordValidationService";
-import { UserGroupsManager } from "./services/UserGroupsManager";
-import { AppRegistrationsController } from "./data-access/AppRegistrationsController";
-import { ClaimsController } from "./data-access/ClaimsController";
-import { SCOPE_ADMIN } from "./api_security";
 
 async function BootstrapServer()
 {
@@ -86,74 +80,4 @@ async function BootstrapServer()
     });
 }
 
-const command = process.argv[2];
-if(command !== undefined)
-    ExecMgmtCommand(command, process.argv.slice(3));
-else
-    BootstrapServer();
-
-async function ExecMgmtCommand(command: string, args: string[])
-{
-    switch(command)
-    {
-        case "bootstrap":
-        {
-            if(args.length !== 2)
-            {
-                console.error("You need to provide exactly two arguments on the command line, e-mail address and password");
-                return;
-            }
-
-            const eMailAddress = args[0];
-            const password = args[1];
-
-            const passwordValidationService = GlobalInjector.Resolve(PasswordValidationService);
-            const result = passwordValidationService.Validate(password);
-            if(result !== undefined)
-            {
-                console.log("Password not valid: " + result)
-                return;
-            }
-
-            const usersManager = GlobalInjector.Resolve(UsersManager);
-            const userId = await usersManager.CreateUser({
-                type: "human",
-                eMailAddress,
-                givenName: eMailAddress
-            });
-            const error = await usersManager.SetPassword(userId, password);
-            if(error)
-                console.log("Error while setting users password: ", error);
-            else
-                console.log("User", eMailAddress, "was created successfully.");
-
-            const userGroupsManager = GlobalInjector.Resolve(UserGroupsManager);
-            const groupId = await userGroupsManager.Create({ name: "Admins" });
-            await userGroupsManager.AddMember(groupId, userId);
-
-            const appRegistrationsController = GlobalInjector.Resolve(AppRegistrationsController);
-            const appRegId = await appRegistrationsController.Create("OIDP_PORTAL", {
-                appUserId: null,
-                displayName: "OpenIdentityProvider Portal",
-                postLogoutRedirectURIs: ["http://localhost:8081/oauth2loggedout"],
-                redirectURIs: ["http://localhost:8081/oauth2loggedin"],
-                type: "authorization_code",
-            });
-
-            const claimsController = GlobalInjector.Resolve(ClaimsController);
-            const claimId = await claimsController.AddVariable(appRegId, {
-                claimName: "scope",
-                claimType: "string-list-space-separated"
-            });
-            await claimsController.AddValue(claimId, { groupId, value: "openid" });
-            await claimsController.AddValue(claimId, { groupId, value: "email" });
-            await claimsController.AddValue(claimId, { groupId, value: "profile" });
-            await claimsController.AddValue(claimId, { groupId, value: SCOPE_ADMIN });
-
-            console.log("Initial configuration complete :)");
-        }
-        break;
-        default:
-            console.error("Unknown management command: " + command);
-    }
-}
+BootstrapServer();
