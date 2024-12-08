@@ -27,13 +27,16 @@ import { OpenAPI } from 'acts-util-core';
 import { APIRegistry } from 'acts-util-apilib';
 import { ActiveDirectoryService } from "./services/ActiveDirectoryService";
 import { PKIManager } from "./services/PKIManager";
+import { CORSHandler } from "./services/CORSHandler";
 
 async function BootstrapServer()
 {
     GlobalInjector.Resolve(ActiveDirectoryService).Initialize(); //start samba AD early
 
+    const corsHandler = GlobalInjector.Resolve(CORSHandler);
+
     const requestHandlerChain = Factory.CreateRequestHandlerChain();
-    requestHandlerChain.AddCORSHandler(CONFIG_OIDC.allowedOrigins);
+    requestHandlerChain.AddDynamicCORSHandler(corsHandler.IsValid.bind(corsHandler));
     requestHandlerChain.AddBodyParser();
 
     const pki = GlobalInjector.Resolve(PKIManager);

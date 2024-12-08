@@ -19,11 +19,12 @@ import crypto from "crypto";
 import { Injectable } from "acts-util-node";
 import { AppRegistrationProperties, AppRegistrationsController } from "../data-access/AppRegistrationsController";
 import { UsersManager } from "./UsersManager";
+import { CORSHandler } from "./CORSHandler";
 
 @Injectable
 export class AppRegistrationsManager
 {
-    constructor(private appRegistrationsController: AppRegistrationsController, private usersManager: UsersManager)
+    constructor(private appRegistrationsController: AppRegistrationsController, private usersManager: UsersManager, private corsHandler: CORSHandler)
     {
     }
 
@@ -37,6 +38,9 @@ export class AppRegistrationsManager
             ...props,
             appUserId,
         });
+
+        this.corsHandler.ReloadOrigins();
+
         return externalId as string;
     }
 
@@ -46,6 +50,8 @@ export class AppRegistrationsManager
         if(appReg?.appUserId !== null)
             await this.usersManager.DeleteUser(appReg!.appUserId);
         await this.appRegistrationsController.DeleteByExternalId(appRegId);
+
+        this.corsHandler.ReloadOrigins();
     }
 
     public async UpdateByExternalId(appRegId: string, props: AppRegistrationProperties)
@@ -70,6 +76,8 @@ export class AppRegistrationsManager
             if(appReg?.appUserId !== null)
                 await this.usersManager.DeleteUser(appReg!.appUserId);
         }
+
+        this.corsHandler.ReloadOrigins();
     }
 
     //Private methods

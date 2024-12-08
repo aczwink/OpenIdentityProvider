@@ -23,7 +23,6 @@ export const CONFIG_DB = {
 };
 
 export const CONFIG_OIDC = {
-    allowedOrigins: [process.env.OIDP_ALLOWED_ORIGIN!],
     domain: process.env.OIDP_DOMAIN!,
     port: parseInt(process.env.OIDP_PORT!),
 };

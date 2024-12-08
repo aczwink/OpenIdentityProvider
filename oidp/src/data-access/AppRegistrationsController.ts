@@ -111,6 +111,13 @@ export class AppRegistrationsController
         return rows;
     }
 
+    public async QueryAllRedirectURIs()
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const rows = await conn.Select<{ redirectURIs: string; }>("SELECT redirectURIs FROM appregistrations");
+        return rows.Values().Map(row => (JSON.parse(row.redirectURIs) as string[]).Values()).Flatten();
+    }
+
     public async UpdateByExternalId(externalId: string, data: AppRegistrationRecord)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();

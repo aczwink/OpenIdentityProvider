@@ -26,6 +26,7 @@ import { ScopeEvaluationService } from "../services/ScopeEvaluationService";
 import { UserAccountsController } from "../data-access/UserAccountsController";
 import { AppRegistrationsController } from "../data-access/AppRegistrationsController";
 import { PKIManager } from "../services/PKIManager";
+import { CORSHandler } from "../services/CORSHandler";
 
 function CreateAdapter(name: string): Adapter
 {
@@ -50,7 +51,8 @@ const oidcConfig: Configuration = {
 
     clientBasedCORS(ctx, origin, client)
     {
-        return CONFIG_OIDC.allowedOrigins.Contains(origin);
+        const corsHandler = GlobalInjector.Resolve(CORSHandler);
+        return corsHandler.IsValid(origin);
     },
 
     extraTokenClaims: async function(_, token)
