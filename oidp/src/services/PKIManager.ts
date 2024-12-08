@@ -42,6 +42,13 @@ export class PKIManager
     }
 
     //Public methods
+    public async LoadCACert()
+    {
+        const ca = await this.ReadCA();
+
+        return ca.publicKey;
+    }
+
     public async LoadServiceKeyPair()
     {
         const oidp = await this.ReadKeyPair("oidp");
@@ -147,25 +154,33 @@ export class PKIManager
 
     private async ProvideCA(dirPath: string)
     {
-        const ca = await this.ReadKeyPair("ca");
+        const ca = await this.ReadCA();
+
         const keyPath = path.join(dirPath, "ca.key");
         const certPath = path.join(dirPath, "ca.crt");
-        if(ca === undefined)
-        {
-            const ca = await this.GenerateCA();
-            await fs.promises.writeFile(keyPath, ca.key, "utf-8");
-            await fs.promises.writeFile(certPath, ca.crt, "utf-8");
-        }
-        else
-        {
-            await fs.promises.writeFile(keyPath, ca.privateKey, "utf-8");
-            await fs.promises.writeFile(certPath, ca.publicKey, "utf-8");
-        }
-
+        
+        await fs.promises.writeFile(keyPath, ca.privateKey, "utf-8");
+        await fs.promises.writeFile(certPath, ca.publicKey, "utf-8");
+        
         return {
             keyPath,
             certPath
         };
+    }
+
+    private async ReadCA()
+    {
+        const ca = await this.ReadKeyPair("ca");
+        if(ca === undefined)
+        {
+            const ca = await this.GenerateCA();
+            return {
+                privateKey: ca.key,
+                publicKey: ca.crt
+            };
+        }
+
+        return ca;
     }
 
     private async SignRequest(request: Request)

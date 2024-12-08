@@ -68,6 +68,7 @@ export class UserAccountsController
     public async Delete(userId: number)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.DeleteRows("users_clientSecrets", "userId = ?", userId);
         await conn.DeleteRows("users", "internalId = ?", userId);
     }
 

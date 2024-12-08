@@ -42,7 +42,11 @@ class _api_
         @Body data: UserAccountOverviewData
     )
     {
-        await this.usersManager.CreateUser(data);
+        const userId = await this.usersManager.CreateUser(data);
+        const pw = "user1234!"; //TODO: should send this to user per mail
+        await this.usersManager.SetPassword(userId, pw);
+
+        return pw;
     }
 
     @Get()

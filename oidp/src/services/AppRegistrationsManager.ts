@@ -67,7 +67,8 @@ export class AppRegistrationsManager
                 appUserId: null,
             });
 
-            await this.usersManager.DeleteUser(appReg!.appUserId!);
+            if(appReg?.appUserId !== null)
+                await this.usersManager.DeleteUser(appReg!.appUserId);
         }
     }
 

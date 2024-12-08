@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
+import fs from "fs";
 import readline from "readline";
 import { Writable } from "stream";
 import { GlobalInjector } from "acts-util-node";
@@ -24,6 +25,7 @@ import { ClaimsController } from "./data-access/ClaimsController";
 import { PasswordValidationService } from "./services/PasswordValidationService";
 import { UserGroupsManager } from "./services/UserGroupsManager";
 import { UsersManager } from "./services/UsersManager";
+import { PKIManager } from "./services/PKIManager";
 
 function ReadLineFromStdIn(prompt: string, hide: boolean)
 {
@@ -121,6 +123,17 @@ async function ExecMgmtCommand(command: string | undefined, args: string[])
             await claimsController.AddValue(claimId, { groupId, value: SCOPE_ADMIN });
 
             console.log("Initial configuration complete :)");
+        }
+        break;
+        case "pki":
+        {
+            const pkiManager = GlobalInjector.Resolve(PKIManager);
+
+            const caCrt = await pkiManager.LoadCACert();
+
+            await fs.promises.writeFile("./ca.crt", caCrt, "utf-8");
+
+            console.log("PKI successfully written to current working directory.");
         }
         break;
         default:

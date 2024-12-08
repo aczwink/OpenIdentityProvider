@@ -25,7 +25,11 @@ import { Use } from "acfrontend";
 const createUserRoute: RouteSetup<{}, HumanUserAccount> = {
     content: {
         type: "create",
-        call: (_, data) => Use(APIService).users.post(data),
+        call: async (_, data) => {
+            const response = await Use(APIService).users.post(data);
+            alert("The users initial password is: " + response.data);
+            return response;
+        },
         schema: OpenAPISchema("HumanUserAccount")
     },
     displayText: "Create user",
