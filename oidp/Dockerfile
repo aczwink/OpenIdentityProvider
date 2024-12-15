@@ -2,6 +2,9 @@ FROM ghcr.io/aczwink/samba-domain
 
 WORKDIR /app
 
+RUN apt update
+RUN apt install -y mariadb-client
+
 #install node v18
 ENV NODE_VERSION=18.20.4
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash

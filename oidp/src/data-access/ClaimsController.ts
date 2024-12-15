@@ -73,6 +73,12 @@ export class ClaimsController
         await conn.DeleteRows("appregistrations_claims_values", "claimId = ? AND value = ? AND groupId = ?", claimId, claimValue.value, claimValue.groupId);
     }
 
+    public async DeleteVariable(claimId: number)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        await conn.DeleteRows("appregistrations_claims", "id = ?", claimId);
+    }
+
     public async QueryValues(claimId: number)
     {
         const query = `
@@ -85,17 +91,15 @@ export class ClaimsController
         return rows;
     }
     
-    public async QueryVariables(externalAppRegistrationId: string)
+    public async QueryVariables(appRegistrationId: number)
     {
         const query = `
         SELECT ac.*
         FROM appregistrations_claims ac
-        INNER JOIN appregistrations a
-            ON ac.appRegistrationId = a.internalId
-        WHERE a.externalId = ?
+        WHERE ac.appRegistrationId = ?
         `;
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const rows = await conn.Select<ClaimVariable>(query, externalAppRegistrationId);
+        const rows = await conn.Select<ClaimVariable>(query, appRegistrationId);
         return rows;
     }
 }

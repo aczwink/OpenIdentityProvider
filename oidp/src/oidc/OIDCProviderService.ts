@@ -20,13 +20,14 @@ import { GlobalInjector, Injectable } from "acts-util-node";
 import Provider, { Adapter, Configuration } from 'oidc-provider';
 import { ClientsAdapter } from "./ClientsAdapter";
 import { MemoryAdapter } from "./MemoryAdapter";
-import { CONFIG_OIDC } from "../env";
+import { CONFIG_OIDC_ISSUER } from "../env";
 import { ClaimProviderService } from "../services/ClaimProviderService";
-import { ScopeEvaluationService } from "../services/ScopeEvaluationService";
 import { UserAccountsController } from "../data-access/UserAccountsController";
 import { AppRegistrationsController } from "../data-access/AppRegistrationsController";
 import { PKIManager } from "../services/PKIManager";
 import { CORSHandler } from "../services/CORSHandler";
+import { ClientsController } from "../data-access/ClientsController";
+import { ScopeEvaluationService } from "../services/ScopeEvaluationService";
 
 function CreateAdapter(name: string): Adapter
 {
@@ -60,9 +61,9 @@ const oidcConfig: Configuration = {
         let externalUserId;
         if(token.kind === "ClientCredentials")
         {
-            const appRegistrationsController = GlobalInjector.Resolve(AppRegistrationsController);
-            const appReg = await appRegistrationsController.QueryByExternalId(token.clientId!);
-            const userId = appReg!.appUserId!;
+            const clientsController = GlobalInjector.Resolve(ClientsController);
+            const client = await clientsController.Query(token.clientId!);
+            const userId = client!.appUserId!;
 
             const userAccountsController = GlobalInjector.Resolve(UserAccountsController);
             const user = await userAccountsController.Query(userId);
@@ -74,8 +75,7 @@ const oidcConfig: Configuration = {
             externalUserId = token.accountId;
         
         const claimProviderService = GlobalInjector.Resolve(ClaimProviderService);
-        const provided = await claimProviderService.Provide(token.clientId!, externalUserId);
-        delete provided["scope"];
+        const provided = await claimProviderService.ProvideWithoutScope(token.clientId!, externalUserId);
         return provided;
     },
 
@@ -89,14 +89,20 @@ const oidcConfig: Configuration = {
         resourceIndicators: {
             enabled: true,
 
-            defaultResource(ctx, client, oneOf)
+            async defaultResource(ctx, client, oneOf)
             {
-                return CONFIG_OIDC.domain + ":" + CONFIG_OIDC.port;
+                const clientsController = GlobalInjector.Resolve(ClientsController);
+                const appRegistrationsController = GlobalInjector.Resolve(AppRegistrationsController);
+
+                const clientData = await clientsController.Query(client.clientId);
+                const appReg = await appRegistrationsController.Query(clientData!.appRegistrationId);
+
+                return appReg!.audience;
             },
 
             async getResourceServerInfo(ctx, resourceIndicator, client)
             {
-                const scopes = await GlobalInjector.Resolve(ScopeEvaluationService).ResolveAvailableScopeValues(client.clientId);
+                const scopes = await GlobalInjector.Resolve(ScopeEvaluationService).ProvideScope(client.clientId);
                 return {
                     scope: scopes,
                     accessTokenFormat: "jwt",
@@ -108,7 +114,7 @@ const oidcConfig: Configuration = {
 
             useGrantedResource(ctx, model)
             {
-                //TODO: is this still needed? no, it should be removed and clients should ask for a specific resource server instead
+                //resource parameter is implicitly bound to the client id for oidp
                 return true;
             },
         }
@@ -170,7 +176,7 @@ export class OIDCProviderService
 {
     constructor()
     {
-        this._provider = new Provider('https://' + CONFIG_OIDC.domain +  ':' + CONFIG_OIDC.port, oidcConfig);
+        this._provider = new Provider(CONFIG_OIDC_ISSUER, oidcConfig);
     }
 
     //Properties

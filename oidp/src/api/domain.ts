@@ -16,11 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
-import { APIController, Body, Get, Post, Put, Security } from "acts-util-apilib";
+import { APIController, Body, Get, Put, Security } from "acts-util-apilib";
 import { OIDC_API_SCHEME, SCOPE_ADMIN } from "../api_security";
-import { ActiveDirectoryService } from "../services/ActiveDirectoryService";
 import { ConfigController } from "../data-access/ConfigController";
 import { Of } from "acts-util-core";
+import { ActiveDirectoryIntegrationService } from "../services/ActiveDirectoryIntegrationService";
 
 const configKey = "AD_DomainAdminUserGroup";
 
@@ -36,7 +36,7 @@ interface ActiveDirectoyDomainAdminData
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api_
 {
-    constructor(private activeDirectoryService: ActiveDirectoryService, private configController: ConfigController)
+    constructor(private activeDirectoryIntegrationService: ActiveDirectoryIntegrationService, private configController: ConfigController)
     {
     }
 
@@ -57,9 +57,9 @@ class _api_
         const current = await this.RequestDomainAdminGroup();
 
         if((current.groupId !== undefined) && (current.groupId !== data.groupId))
-            await this.activeDirectoryService.RemoveGroupFromDomainAdmins(current.groupId);
+            await this.activeDirectoryIntegrationService.RemoveGroupFromDomainAdmins(current.groupId);
         if(data.groupId !== undefined)
-            await this.activeDirectoryService.AddGroupToDomainAdmins(data.groupId);
+            await this.activeDirectoryIntegrationService.AddGroupToDomainAdmins(data.groupId);
         
         if(data.groupId === undefined)
             await this.configController.Delete(configKey);

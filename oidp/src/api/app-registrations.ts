@@ -16,23 +16,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
-import { APIController, Body, Delete, Get, NotFound, Path, Post, Put, Query, Security } from "acts-util-apilib";
+import { APIController, Body, BodyProp, Delete, Get, NotFound, Path, Post, Put, Query, Security } from "acts-util-apilib";
 import { OIDC_API_SCHEME, SCOPE_ADMIN } from "../api_security";
 import { AppRegistrationProperties, AppRegistrationsController } from "../data-access/AppRegistrationsController";
 import { ClaimsController, ClaimValue, ClaimVariableProperties } from "../data-access/ClaimsController";
-import { AppRegistrationsManager } from "../services/AppRegistrationsManager";
+import { ClientDataDTO, ClientEditableDataDTO, ClientsManager } from "../services/ClientsManager";
+import { ClientsController } from "../data-access/ClientsController";
 import { Of } from "acts-util-core";
 
-interface AppRegistrationDTO extends AppRegistrationProperties
+interface ClientDataResultDTO
 {
-    clientSecret: string;
+    data: ClientDataDTO;
 }
 
 @APIController("appregistrations")
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api_
 {
-    constructor(private appRegistrationsController: AppRegistrationsController, private appRegistrationsManager: AppRegistrationsManager)
+    constructor(private appRegistrationsController: AppRegistrationsController)
     {
     }
 
@@ -41,7 +42,7 @@ class _api_
         @Body props: AppRegistrationProperties
     )
     {
-        return this.appRegistrationsManager.Create(props);
+        return this.appRegistrationsController.Create(props);
     }
 
     @Get()
@@ -55,39 +56,37 @@ class _api_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api2_
 {
-    constructor(private appRegistrationsController: AppRegistrationsController, private appRegistrationsManager: AppRegistrationsManager)
+    constructor(private appRegistrationsController: AppRegistrationsController)
     {
     }
 
     @Delete()
     public async DeleteAppRegistration(
-        @Path appRegId: string
+        @Path appRegId: number
     )
     {
-        await this.appRegistrationsManager.DeleteByExternalId(appRegId);
+        await this.appRegistrationsController.Delete(appRegId);
     }
 
     @Get()
     public async RequestAppRegistration(
-        @Path appRegId: string
+        @Path appRegId: number
     )
     {
-        const appReg = await this.appRegistrationsController.QueryByExternalId(appRegId);
+        const appReg = await this.appRegistrationsController.Query(appRegId);
         if(appReg === undefined)
             return NotFound("app registration not found");
 
-        return Of<AppRegistrationDTO>({
-            ...appReg
-        });
+        return appReg;
     }
 
     @Put()
     public async UpdateAppRegistrationProperties(
-        @Path appRegId: string,
+        @Path appRegId: number,
         @Body props: AppRegistrationProperties
     )
     {
-        await this.appRegistrationsManager.UpdateByExternalId(appRegId, props);
+        await this.appRegistrationsController.Update(appRegId, props);
     }
 }
 
@@ -95,33 +94,39 @@ class _api2_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api3_
 {
-    constructor(private claimsController: ClaimsController, private appRegistrationsController: AppRegistrationsController)
+    constructor(private claimsController: ClaimsController)
     {
     }
 
     @Post()
     public async CreateAppRegistrationClaim(
-        @Path appRegId: string,
+        @Path appRegId: number,
         @Body data: ClaimVariableProperties
     )
     {
-        const internalId = await this.appRegistrationsController.QueryInternalId(appRegId);
-        if(internalId === undefined)
-            return NotFound("app registration does not exist");
-        return await this.claimsController.AddVariable(internalId, data);
+        return await this.claimsController.AddVariable(appRegId, data);
     }
 
     @Get()
     public async RequestAppRegistrationClaims(
-        @Path appRegId: string
+        @Path appRegId: number
     )
     {
         return await this.claimsController.QueryVariables(appRegId);
     }
 
+    @Delete()
+    public async DeleteAppRegistrationClaim(
+        @Path appRegId: number,
+        @BodyProp claimId: number,
+    )
+    {
+        await this.claimsController.DeleteVariable(claimId);
+    }
+
     @Post("values")
     public async AddValue(
-        @Path appRegId: string,
+        @Path appRegId: number,
         @Query claimId: number,
         @Body claimValue: ClaimValue
     )
@@ -131,7 +136,7 @@ class _api3_
 
     @Delete("values")
     public async DeleteValue(
-        @Path appRegId: string,
+        @Path appRegId: number,
         @Query claimId: number,
         @Body claimValue: ClaimValue
     )
@@ -141,10 +146,67 @@ class _api3_
 
     @Get("values")
     public async RequestClaimValues(
-        @Path appRegId: string,
+        @Path appRegId: number,
         @Query claimId: number
     )
     {
         return await this.claimsController.QueryValues(claimId);
+    }
+}
+
+@APIController("appregistrations/{appRegId}/clients")
+@Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
+class _api4_
+{
+    constructor(private clientsController: ClientsController, private clientsManager: ClientsManager)
+    {
+    }
+
+    @Post()
+    public async CreateAppRegistrationClaim(
+        @Path appRegId: number,
+        @Body data: ClientEditableDataDTO
+    )
+    {
+        return await this.clientsManager.Create(appRegId, data);
+    }
+
+    @Get()
+    public async RequestAppRegistrationClients(
+        @Path appRegId: number
+    )
+    {
+        return await this.clientsController.QueryForAppRegistration(appRegId);
+    }
+
+    @Delete("{clientId}")
+    public async DeleteAppRegistrationClient(
+        @Path appRegId: number,
+        @Path clientId: string
+    )
+    {
+        await this.clientsManager.Delete(clientId);
+    }
+
+    @Get("{clientId}")
+    public async RequestAppRegistrationClient(
+        @Path appRegId: number,
+        @Path clientId: string
+    )
+    {
+        const result = await this.clientsManager.Query(clientId);
+        if(result === undefined)
+            return NotFound("client not found");
+        return Of<ClientDataResultDTO>({ data: result });
+    }
+
+    @Put("{clientId}")
+    public async UpdateAppRegistrationClientProperties(
+        @Path appRegId: number,
+        @Path clientId: string,
+        @Body props: ClientEditableDataDTO
+    )
+    {
+        await this.clientsManager.Update(appRegId, clientId, props);
     }
 }

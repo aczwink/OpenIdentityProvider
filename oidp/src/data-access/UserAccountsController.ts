@@ -37,7 +37,14 @@ interface ServicePrincipal
     externalId: string;
     displayName: string;
 }
-export type UserAccountOverviewData = HumanUserAccount | ServicePrincipal;
+export type UserAccountData = HumanUserAccount | ServicePrincipal;
+
+export interface UserAccountOverviewData
+{
+    type: "human" | "service-principal";
+    id: string;
+    name: string;
+}
 
 interface UserAccount
 {
@@ -55,7 +62,7 @@ export class UserAccountsController
     }
 
     //Public methods
-    public async Create(data: UserAccountOverviewData)
+    public async Create(data: UserAccountData)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
         const result = await conn.InsertRow("users", {
@@ -78,6 +85,11 @@ export class UserAccountsController
         const rows = await conn.Select("SELECT * FROM users");
         return rows.Values()
             .Map(async x => (await this.QueryFullUserData(x))!)
+            .MapAsync(x => Of<UserAccountOverviewData>({
+                id: (x.type === "human") ? x.eMailAddress : x.externalId,
+                name: (x.type === "human") ? x.givenName : x.displayName,
+                type: x.type,
+            }))
             .PromiseAll();
     }
 
@@ -146,7 +158,7 @@ export class UserAccountsController
     }
 
     //Private methods
-    private async QueryFullUserData(row: any): Promise<UserAccountOverviewData | undefined>
+    private async QueryFullUserData(row: any): Promise<UserAccountData | undefined>
     {
         if(row === undefined)
             return undefined;

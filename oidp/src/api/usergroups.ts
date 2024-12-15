@@ -16,13 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
-import { APIController, Body, BodyProp, Delete, Get, NotFound, Path, Post, Security } from "acts-util-apilib";
+import { APIController, Body, BodyProp, Conflict, Delete, Get, NotFound, Path, Post, Security } from "acts-util-apilib";
 import { OIDC_API_SCHEME, SCOPE_ADMIN } from "../api_security";
 import { GroupsController, UserGroupProperties } from "../data-access/GroupsController";
 import { UserAccountsController } from "../data-access/UserAccountsController";
-import { ActiveDirectoryService } from "../services/ActiveDirectoryService";
 import { UsersManager } from "../services/UsersManager";
 import { UserGroupsManager } from "../services/UserGroupsManager";
+import { ActiveDirectoryIntegrationService } from "../services/ActiveDirectoryIntegrationService";
 
 @APIController("usergroups")
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
@@ -37,7 +37,13 @@ class _api_
         @Body props: UserGroupProperties
     )
     {
-        return this.userGroupsManager.Create(props);
+        const result = await this.userGroupsManager.Create(props);
+        switch(result)
+        {
+            case "error_object_exists":
+                return Conflict("A user or another group with the same name already exists.");
+        }
+        return result;
     }
 
     @Get()
@@ -51,7 +57,7 @@ class _api_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api2_
 {
-    constructor(private groupsController: GroupsController, private activeDirectoryService: ActiveDirectoryService)
+    constructor(private groupsController: GroupsController, private activeDirectoryIntegrationService: ActiveDirectoryIntegrationService)
     {
     }
 
@@ -60,7 +66,7 @@ class _api2_
         @Path userGroupId: number
     )
     {
-        await this.activeDirectoryService.DeleteGroup(userGroupId);
+        await this.activeDirectoryIntegrationService.DeleteGroup(userGroupId);
         await this.groupsController.Delete(userGroupId);
     }
 

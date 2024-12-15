@@ -26,6 +26,8 @@ import { PasswordValidationService } from "./services/PasswordValidationService"
 import { UserGroupsManager } from "./services/UserGroupsManager";
 import { UsersManager } from "./services/UsersManager";
 import { PKIManager } from "./services/PKIManager";
+import { ClientsController } from "./data-access/ClientsController";
+import { CONFIG_OIDC_ISSUER } from "./env";
 
 function ReadLineFromStdIn(prompt: string, hide: boolean)
 {
@@ -92,7 +94,7 @@ async function ExecMgmtCommand(command: string | undefined, args: string[])
                 type: "human",
                 eMailAddress,
                 givenName: eMailAddress
-            });
+            }) as number;
             const error = await usersManager.SetPassword(userId, password);
             if(error)
                 console.log("Error while setting users password: ", error);
@@ -100,16 +102,23 @@ async function ExecMgmtCommand(command: string | undefined, args: string[])
                 console.log("User", eMailAddress, "was created successfully.");
 
             const userGroupsManager = GlobalInjector.Resolve(UserGroupsManager);
-            const groupId = await userGroupsManager.Create({ name: "Admins" });
+            const groupId = await userGroupsManager.Create({ name: "Admins" }) as number;
             await userGroupsManager.AddMember(groupId, userId);
 
             const appRegistrationsController = GlobalInjector.Resolve(AppRegistrationsController);
-            const appRegId = await appRegistrationsController.Create("OIDP_PORTAL", {
-                appUserId: null,
-                displayName: "OpenIdentityProvider Portal",
+            const appRegId = await appRegistrationsController.Create({
+                audience: CONFIG_OIDC_ISSUER,
+                displayName: "OpenIdentityProvider"
+            });
+            const clientsController = GlobalInjector.Resolve(ClientsController);
+            await clientsController.Create({
+                appRegistrationId: appRegId,
+                id: "00000000-0000-0000-0000-000000000000",
+                name: "WebPortal",
                 postLogoutRedirectURIs: ["https://localhost:8081/oauth2loggedout"],
                 redirectURIs: ["https://localhost:8081/oauth2loggedin"],
                 type: "authorization_code",
+                appUserId: null
             });
 
             const claimsController = GlobalInjector.Resolve(ClaimsController);

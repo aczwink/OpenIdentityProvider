@@ -18,12 +18,13 @@
 
 import { RouteSetup } from "acfrontendex";
 import { APIService } from "../services/APIService";
-import { AppRegistrationDTO, AppRegistrationOverviewData, AppRegistrationProperties, ClaimValue, ClaimVariable, ClaimVariableProperties } from "../../dist/api";
-import { OpenAPISchema } from "../api-info";
+import { AppRegistration, AppRegistrationProperties, ClaimValue, ClaimVariable, ClaimVariableProperties, ClientDataResultDTO, ClientEditableDataDTO, ClientOverviewData } from "../../dist/api";
+import { APIMap, APIMapSingle, OpenAPISchema } from "../api-info";
 import { Use } from "acfrontend";
 
-type AppRegId = { appRegId: string };
+type AppRegId = { appRegId: number };
 type ClaimId = AppRegId & { claimId: number };
+type ClientId = AppRegId & { clientId: string };
 
 const createAppRegRoute: RouteSetup<{}, AppRegistrationProperties> = {
     content: {
@@ -36,7 +37,7 @@ const createAppRegRoute: RouteSetup<{}, AppRegistrationProperties> = {
     routingKey: "create",
 };
 
-const appRegPropsRoute: RouteSetup<AppRegId, AppRegistrationDTO> = {
+const appRegPropsRoute: RouteSetup<AppRegId, AppRegistration> = {
     content: {
         type: "object",
         actions: [
@@ -53,7 +54,7 @@ const appRegPropsRoute: RouteSetup<AppRegId, AppRegistrationDTO> = {
         ],
         formTitle: (_, appReg) => appReg.displayName,
         requestObject: ids => Use(APIService).appregistrations._any_.get(ids.appRegId),
-        schema: OpenAPISchema("AppRegistrationDTO")
+        schema: OpenAPISchema("AppRegistration")
     },
     displayText: "Overview",
     icon: "app-indicator",
@@ -97,14 +98,36 @@ const claimValuesRoute: RouteSetup<ClaimId, ClaimValue> = {
     },
     displayText: "Values",
     icon: "card-list",
+    routingKey: "values",
+};
+
+const claimRoute: RouteSetup<ClaimId> = {
+    content: {
+        type: "multiPage",
+        actions: [
+            {
+                type: "delete",
+                deleteResource: ids => Use(APIService).appregistrations._any_.claims.delete(ids.appRegId, { claimId: ids.claimId })
+            }
+        ],
+        entries: [
+            {
+                displayName: "",
+                entries: [claimValuesRoute]
+            }
+        ],
+        formTitle: _ => "Claim"
+    },
+    displayText: "Claim",
+    icon: "passport",
     routingKey: "{claimId}",
-}
+};
 
 const claimsRoute: RouteSetup<AppRegId, ClaimVariable> = {
     content: {
         type: "collection",
         actions: [createClaimRoute],
-        child: claimValuesRoute,
+        child: claimRoute,
         id: "id",
         requestObjects: ids => Use(APIService).appregistrations._any_.claims.get(ids.appRegId),
         schema: OpenAPISchema("ClaimVariable")
@@ -114,14 +137,63 @@ const claimsRoute: RouteSetup<AppRegId, ClaimVariable> = {
     routingKey: "claims",
 };
 
-const appRegRoute: RouteSetup<AppRegistrationDTO, AppRegId> = {
+const createClientRoute: RouteSetup<AppRegId, ClientEditableDataDTO> = {
+    content: {
+        type: "create",
+        call: (ids, data) => Use(APIService).appregistrations._any_.clients.post(ids.appRegId, data),
+        schema: OpenAPISchema("ClientEditableDataDTO")
+    },
+    displayText: "Add client",
+    icon: "plus",
+    routingKey: "add",
+};
+
+const clientRoute: RouteSetup<ClientId, ClientEditableDataDTO> = {
+    content: {
+        type: "object",
+        actions: [
+            {
+                type: "edit",
+                requestObject: ids => APIMapSingle(Use(APIService).appregistrations._any_.clients._any_.get(ids.appRegId, ids.clientId), x => x.data),
+                schema: OpenAPISchema("ClientEditableDataDTO"),
+                updateResource: (ids, props) => Use(APIService).appregistrations._any_.clients._any_.put(ids.appRegId, ids.clientId, props),
+            },
+            {
+                type: "delete",
+                deleteResource: ids => Use(APIService).appregistrations._any_.clients._any_.delete(ids.appRegId, ids.clientId),
+            }
+        ],
+        formTitle: (_, client) => client.name ?? (client as any).data.name,
+        requestObject: ids => Use(APIService).appregistrations._any_.clients._any_.get(ids.appRegId, ids.clientId) as any,
+        schema: OpenAPISchema("ClientDataResultDTO"),
+    },
+    displayText: "Client",
+    icon: "person-workspace",
+    routingKey: "{clientId}",
+};
+
+const clientsRoute: RouteSetup<AppRegId, ClientOverviewData> = {
+    content: {
+        type: "collection",
+        actions: [createClientRoute],
+        child: clientRoute,
+        id: "id",
+        requestObjects: ids => Use(APIService).appregistrations._any_.clients.get(ids.appRegId),
+        schema: OpenAPISchema("ClientOverviewData")
+    },
+    displayText: "Clients",
+    icon: "person-workspace",
+    routingKey: "clients",
+};
+
+const appRegRoute: RouteSetup<AppRegistration, AppRegId> = {
     content: {
         type: "multiPage",
         actions: [],
         entries: [
             {
                 displayName: "",
-                entries: [appRegPropsRoute, claimsRoute]
+                entries: [appRegPropsRoute, claimsRoute, clientsRoute]
             }
         ],
         formTitle: _ => "Application registration",
@@ -131,14 +203,14 @@ const appRegRoute: RouteSetup<AppRegistrationDTO, AppRegId> = {
     routingKey: "{appRegId}",
 };
 
-export const appRegistrationsRoutes: RouteSetup<{}, AppRegistrationOverviewData> = {
+export const appRegistrationsRoutes: RouteSetup<{}, AppRegistration> = {
     content: {
         type: "collection",
         actions: [createAppRegRoute],
         child: appRegRoute,
         id: "id",
         requestObjects: () => Use(APIService).appregistrations.get(),
-        schema: OpenAPISchema("AppRegistrationOverviewData")
+        schema: OpenAPISchema("AppRegistration")
     },
     displayText: "Application registrations",
     icon: "app-indicator",

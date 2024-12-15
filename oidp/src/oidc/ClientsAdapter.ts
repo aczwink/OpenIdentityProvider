@@ -17,10 +17,15 @@
  * */
 import { GlobalInjector } from "acts-util-node";
 import { Adapter, AdapterPayload } from "oidc-provider";
-import { AppRegistrationsController } from "../data-access/AppRegistrationsController";
+import { ClientsController } from "../data-access/ClientsController";
 
 export class ClientsAdapter implements Adapter
 {
+    constructor()
+    {
+        this.clientsController = GlobalInjector.Resolve(ClientsController);
+    }
+
     //Public methods
     upsert(id: string, payload: AdapterPayload, expiresIn: number): Promise<void | undefined>
     {
@@ -30,20 +35,19 @@ export class ClientsAdapter implements Adapter
 
     public async find(id: string): Promise<void | AdapterPayload | undefined>
     {
-        const appRegController = GlobalInjector.Resolve(AppRegistrationsController);
-        const appReg = await appRegController.QueryByExternalId(id);
-        if(appReg !== undefined)
+        const client = await this.clientsController.Query(id);
+        if(client !== undefined)
         {
             return {
-                client_id: appReg.id,
-                client_name: appReg.displayName,
-                client_secret: appReg.clientSecret,
-                grant_types: [appReg.type],
+                client_id: client.id,
+                client_name: client.name,
+                client_secret: client.secret,
+                grant_types: [client.type],
                 id_token_signed_response_alg: "ES256",
-                post_logout_redirect_uris: appReg.postLogoutRedirectURIs,
-                redirect_uris: appReg.redirectURIs,
-                token_endpoint_auth_method: (appReg.type === "authorization_code") ? "none" : "client_secret_post",
-                response_types: (appReg.type === "authorization_code") ? ["code"] : [],
+                post_logout_redirect_uris: client.postLogoutRedirectURIs,
+                redirect_uris: client.redirectURIs,
+                token_endpoint_auth_method: (client.type === "authorization_code") ? "none" : "client_secret_post",
+                response_types: (client.type === "authorization_code") ? ["code"] : [],
             };
         }
     }
@@ -77,4 +81,7 @@ export class ClientsAdapter implements Adapter
         console.log("ClientsAdapter.revokeByGrantId", arguments);
         throw new Error('Method not implemented.');
     }
+
+    //State
+    private clientsController: ClientsController;
 }

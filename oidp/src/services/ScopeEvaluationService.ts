@@ -18,33 +18,44 @@
 import { Injectable } from "acts-util-node";
 import { ClaimsController } from "../data-access/ClaimsController";
 import { ClaimProviderService } from "./ClaimProviderService";
+import { ClientsController } from "../data-access/ClientsController";
+import { UserAccountsController } from "../data-access/UserAccountsController";
 
 @Injectable
 export class ScopeEvaluationService
 {
-    constructor(private claimsController: ClaimsController, private claimProviderService: ClaimProviderService)
+    constructor(private claimsController: ClaimsController, private claimProviderService: ClaimProviderService, private clientsController: ClientsController,
+        private userAccountsController: UserAccountsController
+    )
     {
     }
 
     //Public methods
     public async IsScopeRequestValid(clientId: string, userAccountId: string, requestedScope: string)
     {
-        const claims = await this.claimProviderService.Provide(clientId, userAccountId);
+        const clientData = await this.clientsController.Query(clientId);
+        if(clientData === undefined)
+            return false;
+
+        const userId = await this.userAccountsController.QueryInternalId(userAccountId);
+
+        const providedScope = await this.claimProviderService.ProvideScope(clientData.appRegistrationId, userId!);
         const requestedScopes = requestedScope.split(" ");
-        const availableScopes = typeof claims.scope === "string" ? claims.scope.split(" ") : [];
+        const availableScopes = providedScope.split(" ");
 
         return new Set(availableScopes).IsSuperSetOf(new Set(requestedScopes));
     }
 
-    public async ResolveAvailableScopeValues(clientId: string)
+    public async ProvideScope(clientId: string)
     {
-        const variables = await this.claimsController.QueryVariables(clientId);
-        const scopeVar = variables.find(x => x.claimName === "scope");
-        if(scopeVar === undefined)
+        const clientData = await this.clientsController.Query(clientId);
+        if(clientData === undefined)
             return "";
 
-        const possibleValues = await this.claimsController.QueryValues(scopeVar.id);
-        return possibleValues.Values().Map(x => x.value).Filter(x => !this.IsOIDCScope(x)).Join(" ");
+        if(clientData.type === "authorization_code")
+            return await this.ResolveAvailableScopeValues(clientId);
+
+        return await this.claimProviderService.ProvideScope(clientData.appRegistrationId, clientData.appUserId!);
     }
 
     //Private methods
@@ -58,5 +69,20 @@ export class ScopeEvaluationService
                 return true;
         }
         return false;
+    }
+
+    private async ResolveAvailableScopeValues(clientId: string)
+    {
+        const clientData = await this.clientsController.Query(clientId);
+        if(clientData === undefined)
+            return "";
+
+        const variables = await this.claimsController.QueryVariables(clientData.appRegistrationId);
+        const scopeVar = variables.find(x => x.claimName === "scope");
+        if(scopeVar === undefined)
+            return "";
+
+        const possibleValues = await this.claimsController.QueryValues(scopeVar.id);
+        return possibleValues.Values().Map(x => x.value).Filter(x => !this.IsOIDCScope(x)).Join(" ");
     }
 }

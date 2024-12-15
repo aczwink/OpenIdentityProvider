@@ -19,22 +19,40 @@ import { Injectable } from "acts-util-node";
 import { ClaimsController, ClaimVariable } from "../data-access/ClaimsController";
 import { GroupsController } from "../data-access/GroupsController";
 import { UserAccountsController } from "../data-access/UserAccountsController";
+import { ClientsController } from "../data-access/ClientsController";
 
 @Injectable
 export class ClaimProviderService
 {
-    constructor(private claimsController: ClaimsController, private groupsController: GroupsController, private userAccountsController: UserAccountsController)
+    constructor(private claimsController: ClaimsController, private groupsController: GroupsController, private userAccountsController: UserAccountsController,
+        private clientsController: ClientsController
+    )
     {
     }
 
-    public async Provide(externalAppRegistrationId: string, externalUserId: string)
+    //Public methods
+    public async ProvideScope(appRegistrationId: number, userId: number)
     {
+        const claims = await this.ProvideAllClaims(appRegistrationId, userId);
+        const scope = claims["scope"];
+        if(scope === undefined)
+            return "";
+        if(Array.isArray(scope))
+            return scope.join(" ");
+        return scope;
+    }
+
+    public async ProvideWithoutScope(clientId: string, externalUserId: string)
+    {
+        const clientData = await this.clientsController.Query(clientId);
+        if(clientData === undefined)
+            return {};
+
         const userId = await this.userAccountsController.QueryInternalId(externalUserId);
 
-        const variables = await this.claimsController.QueryVariables(externalAppRegistrationId);
-        const variablesWithValues = await variables.Values().Map(this.FetchClaimValues.bind(this, userId!)).PromiseAll();
-
-        return variablesWithValues.Values().NotUndefined().ToDictionary(kv => kv.key, kv => kv.value);
+        const provided = await this.ProvideAllClaims(clientData.appRegistrationId, userId!);
+        delete provided["scope"];
+        return provided;
     }
 
     //Private methods
@@ -64,5 +82,14 @@ export class ClaimProviderService
             key: variable.claimName,
             value: this.ConstructClaimResult(variable, grantedValues)
         };
+    }
+
+    private async ProvideAllClaims(appRegistrationId: number, userId: number)
+    {
+        const variables = await this.claimsController.QueryVariables(appRegistrationId);
+        const variablesWithValues = await variables.Values().Map(this.FetchClaimValues.bind(this, userId)).PromiseAll();
+
+        const provided = variablesWithValues.Values().NotUndefined().ToDictionary(kv => kv.key, kv => kv.value);
+        return provided;
     }
 }

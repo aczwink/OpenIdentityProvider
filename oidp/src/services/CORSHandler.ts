@@ -16,13 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 import { Injectable } from "acts-util-node";
-import { AppRegistrationsController } from "../data-access/AppRegistrationsController";
 import { AbsURL } from "acts-util-core";
+import { ClientsController } from "../data-access/ClientsController";
 
 @Injectable
 export class CORSHandler
 {
-    constructor(private appRegistrationsController: AppRegistrationsController)
+    constructor(private clientsController: ClientsController)
     {
         this.validOrigins = new Set();
 
@@ -38,7 +38,7 @@ export class CORSHandler
     {
         const set = new Set<string>();
 
-        const uris = await this.appRegistrationsController.QueryAllRedirectURIs();
+        const uris = await this.clientsController.QueryAllRedirectURIs();
         for (const uri of uris)
         {
             const url = AbsURL.Parse(uri);

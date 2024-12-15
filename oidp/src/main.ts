@@ -21,7 +21,7 @@ import path from "path";
 import "acts-util-core";
 import { interactionsRouter } from "./oidc/interactions";
 import { Factory, GlobalInjector, HTTP } from "acts-util-node";
-import { CONFIG_OIDC } from "./env";
+import { CONFIG_OIDC, CONFIG_OIDC_ISSUER } from "./env";
 import { OIDCProviderService } from "./oidc/OIDCProviderService";
 import { OpenAPI } from 'acts-util-core';
 import { APIRegistry } from 'acts-util-apilib';
@@ -44,7 +44,8 @@ async function BootstrapServer()
     requestHandlerChain.AddRequestHandler(
         new HTTP.JWTVerifier(
             await pki.LoadSigningKeys(),
-            "https://" + CONFIG_OIDC.domain + ":" + CONFIG_OIDC.port,
+            CONFIG_OIDC_ISSUER,
+            CONFIG_OIDC_ISSUER, //audience = issuer for OIDP
             false
         )
     );

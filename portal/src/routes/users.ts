@@ -27,7 +27,8 @@ const createUserRoute: RouteSetup<{}, HumanUserAccount> = {
         type: "create",
         call: async (_, data) => {
             const response = await Use(APIService).users.post(data);
-            alert("The users initial password is: " + response.data);
+            if(response.statusCode === 200)
+                alert("The users initial password is: " + response.data);
             return response;
         },
         schema: OpenAPISchema("HumanUserAccount")
@@ -60,9 +61,9 @@ export const usersRoute: RouteSetup<{}, UserAccountOverviewData> = {
         type: "collection",
         actions: [createUserRoute],
         child: userRoute,
-        id: x => (x.type === "human") ? x.eMailAddress : x.externalId,
+        id: "id",
         requestObjects: () => Use(APIService).users.get(),
-        schema: OpenAPISchema("HumanUserAccount"),
+        schema: OpenAPISchema("UserAccountOverviewData"),
     },
     displayText: "Users",
     icon: "person",

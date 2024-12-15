@@ -16,16 +16,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
-import { APIController, Body, Common, Delete, Get, NotFound, Path, Post, Security } from "acts-util-apilib";
-import { UserAccountOverviewData, UserAccountsController } from "../data-access/UserAccountsController";
+import { APIController, Body, Common, Conflict, Delete, Get, NotFound, Path, Post, Security } from "acts-util-apilib";
+import { UserAccountData, UserAccountsController } from "../data-access/UserAccountsController";
 import { OIDC_API_SCHEME, SCOPE_ADMIN } from "../api_security";
-import { ActiveDirectoryService, ActiveDirectoryUserNames } from "../services/ActiveDirectoryService";
+import { ActiveDirectoryUserNames } from "../services/ActiveDirectoryService";
 import { UsersManager } from "../services/UsersManager";
 import { Of } from "acts-util-core";
 
 interface FullUserAccountData
 {
-    userAccount: UserAccountOverviewData;
+    userAccount: UserAccountData;
     ad: ActiveDirectoryUserNames
 };
 
@@ -39,10 +39,16 @@ class _api_
 
     @Post()
     public async CreateUser(
-        @Body data: UserAccountOverviewData
+        @Body data: UserAccountData
     )
     {
         const userId = await this.usersManager.CreateUser(data);
+        switch(userId)
+        {
+            case "error_object_exists":
+                return Conflict("The name is already taken by a group or another user");
+        }
+
         const pw = "user1234!"; //TODO: should send this to user per mail
         await this.usersManager.SetPassword(userId, pw);
 
@@ -60,7 +66,7 @@ class _api_
 @Security(OIDC_API_SCHEME, [SCOPE_ADMIN])
 class _api2_
 {
-    constructor(private userAccountsController: UserAccountsController, private adService: ActiveDirectoryService, private usersManager: UsersManager)
+    constructor(private userAccountsController: UserAccountsController, private usersManager: UsersManager)
     {
     }
 
@@ -91,7 +97,7 @@ class _api2_
         const userAccount = await this.userAccountsController.Query(internalUserId);
         if(userAccount === undefined)
             return NotFound("user not found");
-        const adNames = await this.adService.GetUserNames(internalUserId);
+        const adNames = await this.usersManager.GetADUserNames(internalUserId);
 
         return Of<FullUserAccountData>({
             ad: adNames,

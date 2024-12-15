@@ -17,6 +17,7 @@
  * */
 
 import "./api/app-registrations";
+import "./api/backup";
 import "./api/devices";
 import "./api/dns";
 import "./api/domain";

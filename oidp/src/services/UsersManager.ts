@@ -17,25 +17,28 @@
  * */
 import crypto from "crypto";
 import { Injectable } from "acts-util-node";
-import { UserAccountOverviewData, UserAccountsController } from "../data-access/UserAccountsController";
-import { ActiveDirectoryService } from "./ActiveDirectoryService";
+import { UserAccountData, UserAccountsController } from "../data-access/UserAccountsController";
 import { AuthenticationManager } from "./AuthenticationManager";
 import { PasswordValidationService } from "./PasswordValidationService";
 import { GroupsController } from "../data-access/GroupsController";
+import { ActiveDirectoryIntegrationService } from "./ActiveDirectoryIntegrationService";
 
 @Injectable
 export class UsersManager
 {
-    constructor(private userAccountsController: UserAccountsController, private activeDirectoryService: ActiveDirectoryService, private authManager: AuthenticationManager,
+    constructor(private userAccountsController: UserAccountsController, private activeDirectoryIntegrationService: ActiveDirectoryIntegrationService, private authManager: AuthenticationManager,
         private passwordValidationService: PasswordValidationService, private groupsController: GroupsController,
     )
     {
     }
 
-    public async CreateUser(data: UserAccountOverviewData)
+    //Public methods
+    public async CreateUser(data: UserAccountData)
     {
+        const error = await this.activeDirectoryIntegrationService.CreateUser(data);
+        if(error !== undefined)
+            return error;
         const userId = await this.userAccountsController.Create(data);
-        await this.activeDirectoryService.CreateUser(userId);
 
         return userId;
     }
@@ -46,13 +49,18 @@ export class UsersManager
         for (const groupId of groupIds)
             await this.RemoveMemberFromGroup(userId, groupId);
 
-        await this.activeDirectoryService.DeleteUser(userId);
+        await this.activeDirectoryIntegrationService.DeleteUser(userId);
         await this.userAccountsController.Delete(userId);
+    }
+
+    public async GetADUserNames(userId: number)
+    {
+        return await this.activeDirectoryIntegrationService.GetUserNames(userId);
     }
 
     public async RemoveMemberFromGroup(userId: number, userGroupId: number)
     {
-        await this.activeDirectoryService.RemoveMemberFromGroup(userGroupId, userId);
+        await this.activeDirectoryIntegrationService.RemoveMemberFromGroup(userGroupId, userId);
         await this.groupsController.RemoveMember(userGroupId, userId);
     }
 
@@ -65,8 +73,8 @@ export class UsersManager
         const pwSalt = this.CreateSalt();
         const pwHash = this.authManager.HashPassword(newPassword, pwSalt);
         
+        await this.activeDirectoryIntegrationService.SetUserPassword(userId, newPassword);
         await this.userAccountsController.UpdateUserClientSecret(userId, pwHash, pwSalt);
-        await this.activeDirectoryService.SetUserPassword(userId, newPassword);
     }
 
     //Private methods

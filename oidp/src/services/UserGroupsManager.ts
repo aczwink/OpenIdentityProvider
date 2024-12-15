@@ -17,26 +17,29 @@
  * */
 import { Injectable } from "acts-util-node";
 import { GroupsController, UserGroupProperties } from "../data-access/GroupsController";
-import { ActiveDirectoryService } from "./ActiveDirectoryService";
+import { ActiveDirectoryIntegrationService } from "./ActiveDirectoryIntegrationService";
 
 @Injectable
 export class UserGroupsManager
 {
-    constructor(private groupsController: GroupsController, private activeDirectoryService: ActiveDirectoryService)
+    constructor(private groupsController: GroupsController, private activeDirectoryIntegrationService: ActiveDirectoryIntegrationService)
     {
     }
     
     //Public methods
     public async AddMember(userGroupId: number, userId: number)
     {
+        await this.activeDirectoryIntegrationService.AddMemberToGroup(userGroupId, userId);
         await this.groupsController.AddMember(userGroupId, userId);
-        await this.activeDirectoryService.AddMemberToGroup(userGroupId, userId);
     }
 
     public async Create(props: UserGroupProperties)
     {
+        const error = await this.activeDirectoryIntegrationService.CreateGroup(props.name);
+        if(error !== undefined)
+            return error;
+
         const groupId = await this.groupsController.Create(props);
-        await this.activeDirectoryService.CreateGroup(groupId);
         return groupId;
     }
 }

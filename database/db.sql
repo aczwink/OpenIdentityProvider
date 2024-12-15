@@ -24,18 +24,10 @@ DROP TABLE IF EXISTS `appregistrations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `appregistrations` (
-  `internalId` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `externalId` varchar(200) NOT NULL,
-  `type` char(18) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `audience` varchar(100) NOT NULL,
   `displayName` varchar(200) NOT NULL,
-  `secret` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `redirectURIs` varchar(200) NOT NULL,
-  `postLogoutRedirectURIs` varchar(200) NOT NULL,
-  `appUserId` int(10) unsigned DEFAULT NULL,
-  PRIMARY KEY (`internalId`),
-  UNIQUE KEY `externalId` (`externalId`),
-  KEY `appregistrations_appuserid` (`appUserId`),
-  CONSTRAINT `appregistrations_appuserid` FOREIGN KEY (`appUserId`) REFERENCES `users` (`internalId`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -53,7 +45,7 @@ CREATE TABLE `appregistrations_claims` (
   `claimType` varchar(30) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   PRIMARY KEY (`id`),
   KEY `appregistrations_claims_appregistrationId` (`appRegistrationId`),
-  CONSTRAINT `appregistrations_claims_appregistrationId` FOREIGN KEY (`appRegistrationId`) REFERENCES `appregistrations` (`internalId`)
+  CONSTRAINT `appregistrations_claims_appregistrationId` FOREIGN KEY (`appRegistrationId`) REFERENCES `appregistrations` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -72,6 +64,30 @@ CREATE TABLE `appregistrations_claims_values` (
   KEY `appregistrations_claims_values_groupId` (`groupId`),
   CONSTRAINT `appregistrations_claims_values_claimId` FOREIGN KEY (`claimId`) REFERENCES `appregistrations_claims` (`id`),
   CONSTRAINT `appregistrations_claims_values_groupId` FOREIGN KEY (`groupId`) REFERENCES `groups` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `appregistrations_clients`
+--
+
+DROP TABLE IF EXISTS `appregistrations_clients`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `appregistrations_clients` (
+  `id` char(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `appRegistrationId` int(10) unsigned NOT NULL,
+  `name` varchar(200) NOT NULL,
+  `type` char(18) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `secret` char(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `redirectURIs` varchar(200) NOT NULL,
+  `postLogoutRedirectURIs` varchar(200) NOT NULL,
+  `appUserId` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `appregistrations_clients_appRegistrationId` (`appRegistrationId`),
+  KEY `appregistrations_clients_appUserId` (`appUserId`),
+  CONSTRAINT `appregistrations_clients_appRegistrationId` FOREIGN KEY (`appRegistrationId`) REFERENCES `appregistrations` (`id`),
+  CONSTRAINT `appregistrations_clients_appUserId` FOREIGN KEY (`appUserId`) REFERENCES `users` (`internalId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -207,4 +223,4 @@ CREATE TABLE `users_clientSecrets` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-12-03 22:23:23
+-- Dump completed on 2024-12-15 21:13:00

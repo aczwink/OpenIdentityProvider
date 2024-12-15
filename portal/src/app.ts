@@ -34,7 +34,7 @@ BootstrapApp({
     features: {
         oAuth2: {
             authorizeEndpoint: ENV.AUTH_ENDPOINT,
-            clientId: ENV.CLIENT_ID,
+            clientId: "00000000-0000-0000-0000-000000000000",
             endSessionEndpoint: ENV.ENDSESSION_ENDPOINT,
             flow: "authorizationCode",
             tokenEndpoint: ENV.TOKEN_ENDPOINT,

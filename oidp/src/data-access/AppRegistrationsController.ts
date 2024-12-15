@@ -15,34 +15,18 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-import crypto from "crypto";
 import { Injectable } from "acts-util-node";
 import { DBConnectionsManager } from "./DBConnectionsManager";
-import { Of } from "acts-util-core";
-
-interface AppRegistrationOverviewData
-{
-    id: string;
-    displayName: string;
-}
 
 export interface AppRegistrationProperties
 {
-    type: "authorization_code" | "client_credentials";
+    audience: string;
     displayName: string;
-    redirectURIs: string[];
-    postLogoutRedirectURIs: string[];
 }
 
-interface AppRegistrationRecord extends AppRegistrationProperties
+interface AppRegistration extends AppRegistrationProperties
 {
-    appUserId: number | null;
-}
-
-interface AppRegistration extends AppRegistrationRecord
-{
-    id: string;
-    clientSecret: string;
+    id: number;
 }
 
 @Injectable
@@ -53,79 +37,37 @@ export class AppRegistrationsController
     }
 
     //Public methods
-    public async Create(externalId: string, data: AppRegistrationRecord)
+    public async Create(data: AppRegistrationProperties)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const result = await conn.InsertRow("appregistrations", {
-            externalId,
-            secret: crypto.randomBytes(64).toString("hex"),
-            type: data.type,
-            displayName: data.displayName,
-            redirectURIs: JSON.stringify(data.redirectURIs),
-            postLogoutRedirectURIs: JSON.stringify(data.postLogoutRedirectURIs),
-            appUserId: data.appUserId
-        });
+        const result = await conn.InsertRow("appregistrations", data);
 
         return result.insertId;
     }
 
-    public async DeleteByExternalId(externalId: string)
+    public async Delete(appRegId: number)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        await conn.DeleteRows("appregistrations", "externalId = ?", externalId);
+        await conn.DeleteRows("appregistrations", "id = ?", appRegId);
     }
 
-    public async QueryByExternalId(externalId: string)
+    public async Query(appRegId: number)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const row = await conn.SelectOne("SELECT * FROM appregistrations WHERE externalId = ?", externalId);
-
-        if(row === undefined)
-            return undefined;
-
-        return Of<AppRegistration>({
-            id: row.externalId,
-            type: row.type,
-            clientSecret: row.secret,
-            displayName: row.displayName,
-            redirectURIs: JSON.parse(row.redirectURIs),
-            postLogoutRedirectURIs: JSON.parse(row.postLogoutRedirectURIs),
-            appUserId: row.appUserId
-        });
-    }
-
-    public async QueryInternalId(externalId: string)
-    {
-        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const row = await conn.SelectOne("SELECT internalId FROM appregistrations WHERE externalId = ?", externalId);
-
-        if(row === undefined)
-            return undefined;
-        return row.internalId as number;
+        const row = await conn.SelectOne<AppRegistration>("SELECT * FROM appregistrations WHERE id = ?", appRegId);
+        return row;
     }
 
     public async QueryAll()
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const rows = await conn.Select<AppRegistrationOverviewData>("SELECT externalId AS id, displayName FROM appregistrations");
+        const rows = await conn.Select<AppRegistration>("SELECT * FROM appregistrations");
         return rows;
     }
 
-    public async QueryAllRedirectURIs()
+    public async Update(appRegId: number, data: AppRegistrationProperties)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        const rows = await conn.Select<{ redirectURIs: string; }>("SELECT redirectURIs FROM appregistrations");
-        return rows.Values().Map(row => (JSON.parse(row.redirectURIs) as string[]).Values()).Flatten();
-    }
-
-    public async UpdateByExternalId(externalId: string, data: AppRegistrationRecord)
-    {
-        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
-        await conn.UpdateRows("appregistrations", {
-            displayName: data.displayName,
-            redirectURIs: JSON.stringify(data.redirectURIs),
-            postLogoutRedirectURIs: JSON.stringify(data.postLogoutRedirectURIs),
-            appUserId: data.appUserId
-        }, "externalId = ?", externalId)
+        await conn.UpdateRows("appregistrations", data, "id = ?", appRegId);
     }
 }

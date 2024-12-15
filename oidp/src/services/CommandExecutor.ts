@@ -35,6 +35,50 @@ export class CommandExecutor
         });
     }
 
+    public ExecWithExitCode(command: string[])
+    {
+        const line = command.map(this.EscapeCommandArg.bind(this)).join(" ");
+
+        const child = child_process.spawn(line, {
+            shell: true,
+        });
+        child.stderr.setEncoding("utf-8");
+        child.stderr.on("data", console.error);
+        
+        let stdOut = "";
+        child.stdout.setEncoding("utf-8");
+        child.stdout.on("data", x => stdOut += x);
+
+        return new Promise<{ exitCode: number; stdOut: string; }>( resolve => {
+            child.on("exit", exitCode => {
+                resolve({ exitCode: exitCode!, stdOut });
+            });
+        });
+    }
+
+    public ExecBinary(command: string[])
+    {
+        const line = command.map(this.EscapeCommandArg.bind(this)).join(" ");
+
+        const child = child_process.spawn(line, {
+            shell: true
+        });
+
+        const buffers: Buffer[] = [];
+        child.stderr.setEncoding("utf-8");
+        child.stderr.on("data", console.error);
+        child.stdout.on("data", x => buffers.push(x));
+
+        return new Promise<Buffer>( (resolve, reject) => {
+            child.on("exit", code => {
+                if(code !== 0)
+                    reject();
+                else
+                    resolve(Buffer.concat(buffers));
+            });
+        });
+    }
+
     //Private methods
     private EscapeCommandArg(arg: string)
     {

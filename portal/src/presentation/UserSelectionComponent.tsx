@@ -53,13 +53,7 @@ export class UserSelectionComponent extends Component<UserSelectionInput>
     //Private methods
     private FilterUser(searchText: string, user: UserAccountOverviewData)
     {
-        switch(user.type)
-        {
-            case "human":
-                return user.givenName.includes(searchText);
-            case "service-principal":
-                return user.displayName.includes(searchText);
-        }
+        return user.name.includes(searchText);
     }
 
     private async LoadUsers(searchText: string)
@@ -71,13 +65,7 @@ export class UserSelectionComponent extends Component<UserSelectionInput>
 
     private MapUser(user: UserAccountOverviewData)
     {
-        switch(user.type)
-        {
-            case "human":
-                return { key: user.eMailAddress, displayValue: user.givenName };
-            case "service-principal":
-                return { key: user.externalId, displayValue: user.displayName };
-        }
+        return { key: user.id, displayValue: user.name };
     }
 
     private async ReloadUserName()

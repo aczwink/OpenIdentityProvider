@@ -25,6 +25,18 @@ export function OpenAPISchema<T>(schemaName: keyof typeof apiSchemas)
     return apiSchemas[schemaName] as OpenAPI.ObjectSchema;
 }
 
+export async function APIMapSingle<T, U>(request: Promise<APIResponse<T>>, mapper: (source: T) => U): Promise<APIResponse<U>>
+{
+    const response = await request;
+    if(response.data === undefined)
+        return response as any;
+    return {
+        rawBody: response.rawBody,
+        statusCode: response.statusCode,
+        data: mapper(response.data)
+    };
+}
+
 export async function APIMap<T, U>(request: Promise<APIResponse<T[]>>, mapper: (source: T) => U): Promise<APIResponse<U[]>>
 {
     const response = await request;
