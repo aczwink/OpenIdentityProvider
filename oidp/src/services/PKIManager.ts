@@ -20,7 +20,7 @@ import path from "path";
 import { JsonWebKey } from "crypto";
 import { CreateTempDir, Injectable } from "acts-util-node";
 import { JWK } from "node-jose";
-import { PKIController } from "../data-access/PKIController";
+import { PKI_Type, PKIController } from "../data-access/PKIController";
 import { CommandExecutor } from "./CommandExecutor";
 import { CONFIG_OIDC } from "../env";
 
@@ -42,6 +42,18 @@ export class PKIManager
     }
 
     //Public methods
+    public async CreateServerCert(commonName: string)
+    {
+        const req = await this.CreateRequest(commonName);
+        const serial = await this.SignRequest(req);
+        
+        const key = await fs.promises.readFile(req.keyPath, "utf-8");
+        const crt = await fs.promises.readFile(req.crtPath, "utf-8");
+        await this.StoreKeyPair(commonName, PKI_Type.Server, serial, key, crt);
+
+        await fs.promises.rm(req.tmpdir, { recursive: true });
+    }
+
     public async LoadCACert()
     {
         const ca = await this.ReadCA();
@@ -54,14 +66,7 @@ export class PKIManager
         const oidp = await this.ReadKeyPair("oidp");
         if(oidp === undefined)
         {
-            const req = await this.CreateRequest(CONFIG_OIDC.domain);
-            await this.SignRequest(req);
-
-            const key = await fs.promises.readFile(req.keyPath, "utf-8");
-            const crt = await fs.promises.readFile(req.crtPath, "utf-8");
-            await this.StoreKeyPair("oidp", key, crt);
-            await fs.promises.rm(req.tmpdir, { recursive: true });
-
+            await this.CreateServerCert(CONFIG_OIDC.domain);
             return (await this.ReadKeyPair("oidp"))!;
         }
 
@@ -74,12 +79,21 @@ export class PKIManager
         if(jwks === undefined)
         {
             const signingKey = await this.GenerateSigningKey();
-            await this.pkiController.Set("jwks", Buffer.from(JSON.stringify(signingKey)));
+            await this.pkiController.Set("jwks", PKI_Type.Special, "jwks", Buffer.from(JSON.stringify(signingKey)));
 
             return signingKey as any;
         }
 
         return JSON.parse(jwks.toString("utf-8")) as any;
+    }
+
+    public async ReadKeyPair(name: string)
+    {
+        const keyPair = await this.pkiController.Query(name);
+        if(keyPair !== undefined)
+        {
+            return JSON.parse(keyPair.toString("utf-8")) as { privateKey: string, publicKey: string };
+        }
     }
 
     //Private methods
@@ -134,7 +148,7 @@ export class PKIManager
         const key = await fs.promises.readFile(caKeyPath, "utf-8");
         const crt = await fs.promises.readFile(crtPath, "utf-8");
 
-        await this.StoreKeyPair("ca", key, crt);
+        await this.StoreKeyPair("ca", PKI_Type.Special, "ca", key, crt);
 
         await fs.promises.rm(tmpdir, { recursive: true });
 
@@ -150,6 +164,18 @@ export class PKIManager
         
         await keyStore.generate('EC', "P-256", { alg: 'ES256', use: 'sig' });
         return keyStore.toJSON(true);
+    }
+
+    private async GenerateUniqueSerial(): Promise<string>
+    {
+        const stdout = await this.commandExecutor.Exec([
+            "openssl", "rand", "-hex", "16"
+        ]);
+        const serial = stdout.trim();
+        const exists = await this.pkiController.DoesSerialExist(serial);
+        if(exists)
+            return await this.GenerateUniqueSerial();
+        return serial;
     }
 
     private async ProvideCA(dirPath: string)
@@ -202,10 +228,9 @@ export class PKIManager
         await fs.promises.mkdir(path.join(request.tmpdir, "demoCA"));
         await fs.promises.writeFile(path.join(request.tmpdir, "demoCA", "index.txt"), "");
 
-        //TODO: check if serial is unique!
-        await this.commandExecutor.Exec([
-            "openssl", "rand", "-hex", "16", ">", path.join(request.tmpdir, "demoCA", "serial")
-        ], request.tmpdir);
+        const serialPath = path.join(request.tmpdir, "demoCA", "serial");
+        const serial = await this.GenerateUniqueSerial();
+        await fs.promises.writeFile(serialPath, serial);
 
         await this.commandExecutor.Exec([
             "openssl", "ca", "-utf8", "-batch",
@@ -214,23 +239,16 @@ export class PKIManager
             "-in", request.reqPath, "-out", request.crtPath,
             "-outdir", request.tmpdir,
             "-extfile", request.extPath,
-            "-preserveDN",
+            //"-preserveDN",
             "-notext",
             "-days", "825",
         ], request.tmpdir);
+
+        return serial;
     }
 
-    private async ReadKeyPair(name: string)
+    private async StoreKeyPair(name: string, type: PKI_Type, serial: string, privateKey: string, publicKey: string)
     {
-        const keyPair = await this.pkiController.Query(name);
-        if(keyPair !== undefined)
-        {
-            return JSON.parse(keyPair.toString("utf-8")) as { privateKey: string, publicKey: string };
-        }
-    }
-
-    private async StoreKeyPair(name: string, privateKey: string, publicKey: string)
-    {
-        await this.pkiController.Set(name, Buffer.from(JSON.stringify({privateKey, publicKey})));
+        await this.pkiController.Set(name, type, serial, Buffer.from(JSON.stringify({privateKey, publicKey})));
     }
 }

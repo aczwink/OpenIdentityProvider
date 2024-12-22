@@ -27,6 +27,7 @@ import { dnsRoute } from "./routes/dns";
 import { changeUserPassword } from "./routes/own-user";
 import { domainRoute } from "./routes/domain";
 import ENV from "./env";
+import { pkiRoute } from "./routes/pki";
 
 RegisterCustomFormats();
 
@@ -48,7 +49,7 @@ BootstrapApp({
     layout: {
         navbar: [
             [appRegistrationsRoutes, devicesRoute, userGroupsRoutes, usersRoute],
-            [dnsRoute, domainRoute]
+            [pkiRoute, dnsRoute, domainRoute]
         ],
         user: [changeUserPassword]
     },

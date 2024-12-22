@@ -18,6 +18,17 @@
 import { Injectable } from "acts-util-node";
 import { DBConnectionsManager } from "./DBConnectionsManager";
 
+export enum PKI_Type
+{
+    Special = 0,
+    Server = 1,
+}
+
+interface PKI_Certificate
+{
+    name: string;
+}
+
 @Injectable
 export class PKIController
 {
@@ -26,6 +37,13 @@ export class PKIController
     }
 
     //Public methods
+    public async DoesSerialExist(serial: string)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const row = await conn.SelectOne("SELECT TRUE FROM pki WHERE serial = ?", serial);
+        return row !== undefined;
+    }
+
     public async Query(key: string)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
@@ -33,7 +51,14 @@ export class PKIController
         return row?.value as Buffer | undefined;
     }
 
-    public async Set(key: string, value: Buffer)
+    public async QueryByType(type: PKI_Type)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const rows = await conn.Select<PKI_Certificate>("SELECT name FROM pki WHERE type = ?", type);
+        return rows;
+    }
+
+    public async Set(key: string, type: PKI_Type, serial: string, value: Buffer)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
         const result = await conn.UpdateRows("pki", { value }, "name = ?", key);
@@ -41,6 +66,8 @@ export class PKIController
         {
             await conn.InsertRow("pki", {
                 name: key,
+                type,
+                serial,
                 value
             });
         }
