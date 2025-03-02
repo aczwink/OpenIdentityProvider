@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -32,10 +32,6 @@ interface ChangeUserPasswordDTO
      * @format secret
      */
     newPw: string;
-    /**
-     * @format secret
-     */
-    newPwRepeated: string;
 }
 
 @APIController("own-user")
@@ -52,9 +48,6 @@ class _api_
         @Body data: ChangeUserPasswordDTO
     )
     {
-        if(data.newPw !== data.newPwRepeated)
-            return BadRequest("new passwords don't match");
-
         const userId = await this.userAccountsController.QueryInternalId(accessToken.sub);
 
         const result = await this.authManager.Authenticate(userId!, data.oldPw);

@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -17,16 +17,12 @@
  * */
 
 import { RouteSetup } from "acfrontendex";
-import { ChangeUserPasswordDTO } from "../../dist/api";
-import { Use } from "acfrontend";
-import { APIService } from "../services/APIService";
-import { OpenAPISchema } from "../api-info";
+import { ChangeUserPasswordComponent } from "../views/ChangeUserPasswordComponent";
 
-export const changeUserPassword: RouteSetup<{}, ChangeUserPasswordDTO> = {
+export const changeUserPassword: RouteSetup = {
     content: {
-        type: "create",
-        call: (_, data) => Use(APIService).ownuser.put(data),
-        schema: OpenAPISchema("ChangeUserPasswordDTO")
+        type: "component",
+        component: ChangeUserPasswordComponent,
     },
     displayText: "Change password",
     icon: "key",

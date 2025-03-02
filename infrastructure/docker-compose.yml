@@ -1,0 +1,81 @@
+services:
+  db:
+    command: '--default-time-zone "+00:00"'
+    container_name: oidp-db
+    environment:
+      - MARIADB_DATABASE=openidentityprovider
+      - MARIADB_PASSWORD_FILE=/run/secrets/mariadb-pw
+      - MARIADB_ROOT_PASSWORD_FILE=/run/secrets/mariadb-pw
+      - MARIADB_USER=oidp
+    image: mariadb
+    networks:
+      oidpnet:
+        ipv4_address: 10.1.1.2
+    restart: always
+    volumes:
+      - ./dbdatadir:/var/lib/mysql:Z
+      - ./dbimport:/docker-entrypoint-initdb.d/
+      - ./secret/dbpw:/run/secrets/mariadb-pw
+      
+  oidp:
+    container_name: oidp
+    depends_on:
+      - db
+    dns:
+      - YOUR_OIDP_HOST_IP
+      - YOUR_DNS_FORWARDER_IP
+    dns_search: YOUR_AD_DOMAIN
+    environment:
+      - OIDP_DBHOST=10.1.1.2
+      - OIDP_DBUSER=oidp
+      - OIDP_DBPW=oidp
+      
+      - OIDP_DOMAIN=YOUR_OIDP_ENDPOINT_DOMAIN
+      - OIDP_PORT=3000
+      
+      - OIDP_DNSFORWARDERIP=YOUR_DNS_FORWARDER_IP
+      - OIDP_AD_DOMAIN=YOUR_AD_DOMAIN
+      - OIDP_DCIP=YOUR_OIDP_HOST_IP
+    extra_hosts:
+      - dc1.YOUR_AD_DOMAIN:YOUR_OIDP_HOST_IP
+    hostname: dc1
+    image: ghcr.io/aczwink/openidentityprovider
+    network_mode: host
+    privileged: true
+    restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./oidp:/srv/OpenIdentityProvider:ro
+      - ./oidp/samba_data:/var/lib/samba
+      - ./oidp/samba_config:/etc/samba/external
+      
+  portal:
+    container_name: oidp-portal
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=443 #port inside container
+      - OIDP_AUTH_ENDPOINT=https://YOUR_OIDP_ENDPOINT_DOMAIN:3000/auth
+      - OIDP_BACKEND=YOUR_OIDP_ENDPOINT_DOMAIN
+      - OIDP_BACKEND_PORT=3000
+      - OIDP_CLIENTID=OIDP_PORTAL
+      - OIDP_ENDSESSION_ENDPOINT=https://YOUR_OIDP_ENDPOINT_DOMAIN:3000/session/end
+      - OIDP_FRONTEND_BASEURL=https://YOUR_OIDP_ENDPOINT_DOMAIN:8081
+      - OIDP_TOKEN_ENDPOINT=https://YOUR_OIDP_ENDPOINT_DOMAIN:3000/token
+    image: ghcr.io/aczwink/openidentityprovider-portal
+    networks:
+      oidpnet:
+        ipv4_address: 10.1.1.3
+    ports:
+      - "8081:443"
+    restart: always
+    volumes:
+      - ./secret:/etc/nginx/certs:ro
+      
+networks:
+  oidpnet:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 10.1.1.0/24
+         gateway: 10.1.1.1
+

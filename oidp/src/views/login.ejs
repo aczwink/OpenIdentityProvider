@@ -1,6 +1,11 @@
-<form autocomplete="off" action="/interaction/<%= uid %>/login" method="post">
-    <input required type="text" name="login" placeholder="Enter any login" autofocus="on" />
-    <input required type="password" name="password" placeholder="and password" />
-    
-    <button type="submit" class="login login-submit">Sign-in</button>
+<form action="/interaction/<%= uid %>/login" method="post">
+    <div class="form-floating">
+        <input required type="text" name="login" autofocus="on" class="form-control" />
+        <label>E-Mail address</label>
+    </div>
+    <div class="form-floating">
+        <input required type="password" name="password" class="form-control" />
+        <label>Password</label>
+    </div>
+    <button class="btn btn-primary btn-lg mt-3" type="submit">Sign in</button>
 </form>

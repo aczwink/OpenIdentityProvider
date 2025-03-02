@@ -1,5 +1,5 @@
 {
-    "ext": "ts",
+    "ext": "ts,ejs",
     "ignore": ["./dist"],
     "watch": "./src",
     "verbose": true
