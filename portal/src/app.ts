@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
-import { BootstrapApp, CreateOAuth2RedirectURIs } from "acfrontendex";
+import { BootstrapApp, CreateOAuth2RedirectURIs, RouteSetup } from "acfrontendex";
 import { usersRoute } from "./routes/users";
 import { userGroupsRoutes } from "./routes/groups";
 import { appRegistrationsRoutes } from "./routes/app-registrations";
@@ -30,6 +30,17 @@ import ENV from "./env";
 import { pkiRoute } from "./routes/pki";
 
 RegisterCustomFormats();
+
+const homeRoute: RouteSetup = {
+    content: {
+        type: "element",
+        element: _ => ({ type: "fragment", children: ["Welcome to OpenIdentityProvider management portal! :-)"] }),
+    },
+    displayText: "Home",
+    icon: "house",
+    requiredScopes: [],
+    routingKey: "home",
+};
 
 BootstrapApp({
     features: {
@@ -48,7 +59,7 @@ BootstrapApp({
     },
     layout: {
         navbar: [
-            [appRegistrationsRoutes, devicesRoute, userGroupsRoutes, usersRoute],
+            [homeRoute, appRegistrationsRoutes, devicesRoute, userGroupsRoutes, usersRoute],
             [pkiRoute, dnsRoute, domainRoute]
         ],
         user: [changeUserPassword]

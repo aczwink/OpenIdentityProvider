@@ -89,6 +89,14 @@ const claimValuesRoute: RouteSetup<ClaimId, ClaimValue> = {
         actions: [createClaimValueRoute],
         boundActions: [
             {
+                type: "edit",
+                schema: OpenAPISchema("ClaimValue"),
+                updateResource: async (ids, newValue, oldValue) => {
+                    await Use(APIService).appregistrations._any_.claims.values.delete(ids.appRegId, { claimId: ids.claimId }, oldValue);
+                    return Use(APIService).appregistrations._any_.claims.values.post(ids.appRegId, { claimId: ids.claimId }, newValue);
+                }
+            },
+            {
                 type: "delete",
                 deleteResource: (ids, value) => Use(APIService).appregistrations._any_.claims.values.delete(ids.appRegId, { claimId: ids.claimId }, value)
             }

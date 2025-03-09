@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -84,13 +84,15 @@ export class UserAccountsController
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
         const rows = await conn.Select("SELECT * FROM users");
         return rows.Values()
-            .Map(async x => (await this.QueryFullUserData(x))!)
-            .MapAsync(x => Of<UserAccountOverviewData>({
+            .Map(x => this.QueryFullUserData(x))
+            .Async()
+            .NotUndefined()
+            .Map(x => Of<UserAccountOverviewData>({
                 id: (x.type === "human") ? x.eMailAddress : x.externalId,
                 name: (x.type === "human") ? x.givenName : x.displayName,
                 type: x.type,
             }))
-            .PromiseAll();
+            .ToArray();
     }
 
     public async Query(userId: number)

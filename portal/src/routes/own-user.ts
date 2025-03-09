@@ -26,5 +26,6 @@ export const changeUserPassword: RouteSetup = {
     },
     displayText: "Change password",
     icon: "key",
+    requiredScopes: [],
     routingKey: "changepw",
 };
