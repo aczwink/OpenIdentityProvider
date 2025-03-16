@@ -216,6 +216,22 @@ CREATE TABLE `users_clientSecrets` (
   CONSTRAINT `users_clientSecrets_userId` FOREIGN KEY (`userId`) REFERENCES `users` (`internalId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `users_human`
+--
+
+DROP TABLE IF EXISTS `users_human`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `users_human` (
+  `userId` int(10) unsigned NOT NULL,
+  `eMailAddress` varchar(200) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `givenName` varchar(200) NOT NULL,
+  PRIMARY KEY (`userId`),
+  CONSTRAINT `users_human_userId` FOREIGN KEY (`userId`) REFERENCES `users` (`internalId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -226,4 +242,4 @@ CREATE TABLE `users_clientSecrets` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-12-30  0:16:55
+-- Dump completed on 2025-03-16 21:49:28

@@ -25,17 +25,27 @@ interface ClientSecretData
     pwSalt: string;
 }
 
-interface HumanUserAccount
+interface HumanUserAccountCreationData
 {
     type: "human";
     eMailAddress: string;
     givenName: string;
 }
-interface ServicePrincipal
+interface ServicePrincipalCreationData
 {
     type: "service-principal";
+    name: string;
+}
+export type UserAccountCreationData = HumanUserAccountCreationData | ServicePrincipalCreationData;
+
+interface HumanUserAccount extends HumanUserAccountCreationData
+{
     externalId: string;
-    displayName: string;
+    name: string;
+}
+interface ServicePrincipal extends ServicePrincipalCreationData
+{
+    externalId: string;
 }
 export type UserAccountData = HumanUserAccount | ServicePrincipal;
 
@@ -65,10 +75,21 @@ export class UserAccountsController
     public async Create(data: UserAccountData)
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+
         const result = await conn.InsertRow("users", {
-            externalId: (data.type === "human") ? data.eMailAddress : data.externalId,
-            name: (data.type === "human") ? data.givenName : data.displayName
+            externalId: data.externalId,
+            name: data.name
         });
+
+        if(data.type === "human")
+        {
+            await conn.InsertRow("users_human", {
+                userId: result.insertId,
+                eMailAddress: data.eMailAddress,
+                givenName: data.givenName
+            });
+        }
+        
         return result.insertId;
     }
 
@@ -76,6 +97,7 @@ export class UserAccountsController
     {
         const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
         await conn.DeleteRows("users_clientSecrets", "userId = ?", userId);
+        await conn.DeleteRows("users_human", "userId = ?", userId);
         await conn.DeleteRows("users", "internalId = ?", userId);
     }
 
@@ -88,8 +110,8 @@ export class UserAccountsController
             .Async()
             .NotUndefined()
             .Map(x => Of<UserAccountOverviewData>({
-                id: (x.type === "human") ? x.eMailAddress : x.externalId,
-                name: (x.type === "human") ? x.givenName : x.displayName,
+                id: x.externalId,
+                name: x.name,
                 type: x.type,
             }))
             .ToArray();
@@ -165,19 +187,29 @@ export class UserAccountsController
         if(row === undefined)
             return undefined;
 
-        const secretRow = await this.QuerySecretData(row.internalId);
-        if(secretRow === undefined)
+        const humanRow = await this.QueryHumanUserData(row.internalId);
+        if(humanRow === undefined)
         {
             return Of<ServicePrincipal>({
                 type: "service-principal",
-                displayName: row.name,
+                name: row.name,
                 externalId: row.externalId
             });
         }
         return Of<HumanUserAccount>({
-            eMailAddress: row.externalId,
-            givenName: row.name,
+            eMailAddress: humanRow.eMailAddress,
+            externalId: row.externalId,
+            givenName: humanRow.givenName,
+            name: row.name,
             type: "human"
         });
+    }
+
+    private async QueryHumanUserData(internalUserId: number)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const row = await conn.SelectOne<{ eMailAddress: string; givenName: string; }>("SELECT * FROM users_human WHERE userId = ?", internalUserId);
+
+        return row;
     }
 }

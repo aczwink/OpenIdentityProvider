@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2019-2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2019-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -51,14 +51,6 @@ export class UserValuePresenter extends Component<{ userId: string; }>
         const response = await this.apiService.users._any_.get(this.input.userId);
         if(response.statusCode !== 200)
             throw new Error("todo implement me");
-        switch(response.data.userAccount.type)
-        {
-            case "human":
-                this.userName = response.data.userAccount.givenName;
-                break;
-            case "service-principal":
-                this.userName = response.data.userAccount.displayName;
-                break;
-        }
+        this.userName = response.data.userAccount.name;
     }
 }

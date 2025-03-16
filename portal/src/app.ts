@@ -28,6 +28,7 @@ import { changeUserPassword } from "./routes/own-user";
 import { domainRoute } from "./routes/domain";
 import ENV from "./env";
 import { pkiRoute } from "./routes/pki";
+import { OIDCService, RootInjector } from "acfrontend";
 
 RegisterCustomFormats();
 
@@ -42,29 +43,38 @@ const homeRoute: RouteSetup = {
     routingKey: "home",
 };
 
-BootstrapApp({
-    features: {
-        oAuth2: {
-            authorizeEndpoint: ENV.AUTH_ENDPOINT,
-            clientId: "00000000-0000-0000-0000-000000000000",
-            endSessionEndpoint: ENV.ENDSESSION_ENDPOINT,
-            flow: "authorizationCode",
-            tokenEndpoint: ENV.TOKEN_ENDPOINT,
-            ...CreateOAuth2RedirectURIs(ENV.FRONTEND_BASEURL),
+async function StartUp()
+{
+    const oidcService = RootInjector.Resolve(OIDCService);
+
+    const oidcConfig = await oidcService.RequestConfig(ENV.OIDP_ENDPOINT);
+
+    BootstrapApp({
+        features: {
+            oAuth2: {
+                authorizeEndpoint: oidcConfig.authorization_endpoint,
+                clientId: "00000000-0000-0000-0000-000000000000",
+                endSessionEndpoint: oidcConfig.end_session_endpoint,
+                flow: "authorizationCode",
+                tokenEndpoint: oidcConfig.token_endpoint,
+                ...CreateOAuth2RedirectURIs(ENV.FRONTEND_BASEURL),
+            },
+    
+            OIDC: true,
+    
+            openAPI: openAPIRoot as OpenAPI.Root,
         },
+        layout: {
+            navbar: [
+                [homeRoute, appRegistrationsRoutes, devicesRoute, userGroupsRoutes, usersRoute],
+                [pkiRoute, dnsRoute, domainRoute]
+            ],
+            user: [changeUserPassword]
+        },
+        mountPoint: document.body,
+        title: "OpenIdentityProvider Portal",
+        version: "0.1 beta"
+    });
+}
 
-        OIDC: true,
-
-        openAPI: openAPIRoot as OpenAPI.Root,
-    },
-    layout: {
-        navbar: [
-            [homeRoute, appRegistrationsRoutes, devicesRoute, userGroupsRoutes, usersRoute],
-            [pkiRoute, dnsRoute, domainRoute]
-        ],
-        user: [changeUserPassword]
-    },
-    mountPoint: document.body,
-    title: "OpenIdentityProvider Portal",
-    version: "0.1 beta"
-});
+StartUp();

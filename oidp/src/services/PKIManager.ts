@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -22,7 +22,7 @@ import { CreateTempDir, Injectable } from "acts-util-node";
 import { JWK } from "node-jose";
 import { PKI_Type, PKIController } from "../data-access/PKIController";
 import { CommandExecutor } from "./CommandExecutor";
-import { CONFIG_OIDC } from "../env";
+import * as ENV from "../env";
 
 interface Request
 {
@@ -63,11 +63,12 @@ export class PKIManager
 
     public async LoadServiceKeyPair()
     {
-        const oidp = await this.ReadKeyPair("oidp");
+        const certName = ENV.CONFIG_OIDC.domain;
+        const oidp = await this.ReadKeyPair(certName);
         if(oidp === undefined)
         {
-            await this.CreateServerCert(CONFIG_OIDC.domain);
-            return (await this.ReadKeyPair("oidp"))!;
+            await this.CreateServerCert(certName);
+            return (await this.ReadKeyPair(certName))!;
         }
 
         return oidp;
@@ -134,6 +135,7 @@ export class PKIManager
             "-out", caKeyPath
         ]);
 
+        const commonName = ENV.IdentityProviderName;
         await this.commandExecutor.Exec([
             "openssl", "req", "-batch", "-utf8", "-new",
             "-key", caKeyPath, "-keyout", caKeyPath,
@@ -142,7 +144,7 @@ export class PKIManager
             "-days", "3650",
             "-sha256",
             "-noenc",
-            "-subj", "/CN=OIDP/O=OIDP/C=US/ST=Oregon"
+            "-subj", "/CN=" + commonName + "/O=OIDP/C=US/ST=Oregon"
         ]);
 
         const key = await fs.promises.readFile(caKeyPath, "utf-8");

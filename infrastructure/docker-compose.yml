@@ -54,13 +54,10 @@ services:
     environment:
       - NGINX_HOST=localhost
       - NGINX_PORT=443 #port inside container
-      - OIDP_AUTH_ENDPOINT=https://YOUR_OIDP_ENDPOINT_DOMAIN:3000/auth
-      - OIDP_BACKEND=YOUR_OIDP_ENDPOINT_DOMAIN
-      - OIDP_BACKEND_PORT=3000
+      - OIDP_BACKEND_URL=https://YOUR_OIDP_ENDPOINT_DOMAIN:3000
       - OIDP_CLIENTID=OIDP_PORTAL
-      - OIDP_ENDSESSION_ENDPOINT=https://YOUR_OIDP_ENDPOINT_DOMAIN:3000/session/end
       - OIDP_FRONTEND_BASEURL=https://YOUR_OIDP_ENDPOINT_DOMAIN:8081
-      - OIDP_TOKEN_ENDPOINT=https://YOUR_OIDP_ENDPOINT_DOMAIN:3000/token
+      - OIDP_OIDP_ENDPOINT=YOUR_OIDP_ENDPOINT_DOMAIN:3000
     image: ghcr.io/aczwink/openidentityprovider-portal
     networks:
       oidpnet:

@@ -63,6 +63,8 @@ export class UserGroupSelectionComponent extends Component<UserGroupSelectionInp
             this.selection = null;
         else if(this.input.userGroupId !== this.selection?.key)
         {
+            this.selection = null;
+
             const response = await this.apiService.usergroups._any_.get(this.input.userGroupId);
             if(response.statusCode === 200)
             {

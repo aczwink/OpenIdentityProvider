@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -26,7 +26,7 @@ export class APIService extends API
     {
         super( req => this.base.SendRequest(req) );
 
-        this.base = new APIServiceBase(httpService, ENV.BACKEND, parseInt(ENV.BACKEND_PORT), "https");
+        this.base = new APIServiceBase(httpService, ENV.BACKEND.host, ENV.BACKEND.port, ENV.BACKEND.protocol);
 
         oAuth2TokenManager.tokenIssued.Subscribe(x => this.accessToken = x.accessToken);
     }

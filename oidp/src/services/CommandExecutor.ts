@@ -35,11 +35,12 @@ export class CommandExecutor
         });
     }
 
-    public ExecWithExitCode(command: string[])
+    public ExecWithExitCode(command: string[], env?: any)
     {
-        const line = command.map(this.EscapeCommandArg.bind(this)).join(" ");
+        const commandLine = command.map(this.EscapeCommandArg.bind(this)).join(" ");
 
-        const child = child_process.spawn(line, {
+        const child = child_process.spawn(commandLine, {
+            env,
             shell: true,
         });
         child.stderr.setEncoding("utf-8");

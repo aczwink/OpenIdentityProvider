@@ -17,7 +17,7 @@
  * */
 
 import { APIController, Body, Common, Conflict, Delete, Get, NotFound, Path, Post, Security } from "acts-util-apilib";
-import { UserAccountData, UserAccountsController } from "../data-access/UserAccountsController";
+import { UserAccountCreationData, UserAccountData, UserAccountsController } from "../data-access/UserAccountsController";
 import { OIDC_API_SCHEME, SCOPE_ADMIN } from "../api_security";
 import { ActiveDirectoryUserNames } from "../services/ActiveDirectoryService";
 import { UsersManager } from "../services/UsersManager";
@@ -39,7 +39,7 @@ class _api_
 
     @Post()
     public async CreateUser(
-        @Body data: UserAccountData
+        @Body data: UserAccountCreationData
     )
     {
         const userId = await this.usersManager.CreateUser(data);

@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -43,18 +43,6 @@ export class ActiveDirectoryIntegrationService
         await this.activeDirectoryService.AddMemberToGroup(group_sAMAccountName, user_sAMAccountName);
     }
 
-    public async CreateGroup(userGroupName: string)
-    {
-        const sAMAccountName = userGroupName;
-        return await this.activeDirectoryService.CreateGroup(sAMAccountName);
-    }
-
-    public async CreateUser(data: UserAccountData)
-    {
-        const sAMAccountName = this.MapToUser_sAMAccountName(data);
-        return await this.activeDirectoryService.CreateUser(sAMAccountName, data);
-    }
-
     public async DeleteGroup(userGroupId: number)
     {
         const sAMAccountName = await this.MapToGroup_sAMAccountName(userGroupId);
@@ -87,6 +75,34 @@ export class ActiveDirectoryIntegrationService
         await this.activeDirectoryService.RemoveMemberFromGroup(group_sAMAccountName, user_sAMAccountName);
     }
 
+    public async SetGroup(userGroupName: string, members: UserAccountData[], failIfExisting: boolean = false)
+    {
+        const sAMAccountName = userGroupName;
+        const result = await this.activeDirectoryService.QueryGroup(sAMAccountName);
+        if(result === undefined)
+        {
+            const result = await this.activeDirectoryService.CreateGroup(sAMAccountName);
+            if(result !== undefined)
+                return result;
+            await this.SetGroupMembers(sAMAccountName, members.map(this.MapToUser_sAMAccountName.bind(this)));
+            return;
+        }
+        if(failIfExisting)
+            return "error_object_exists";
+        throw new Error("TODO: change group to desired state");
+    }
+
+    public async SetUser(data: UserAccountData, uid: number, failIfExisting: boolean = false)
+    {
+        const sAMAccountName = this.MapToUser_sAMAccountName(data);
+        const result = await this.activeDirectoryService.QueryUser(sAMAccountName);
+        if(result === undefined)
+            return await this.activeDirectoryService.CreateUser(sAMAccountName, data, uid);
+        if(failIfExisting)
+            return "error_object_exists";
+        throw new Error("TODO: change user to desired state");
+    }
+
     public async SetUserPassword(userId: number, newPassword: string)
     {
         const sAMAccountName = await this.MapToUser_sAMAccountNameById(userId);
@@ -117,7 +133,7 @@ export class ActiveDirectoryIntegrationService
                     case "human":
                         return userAccount.givenName;
                     case "service-principal":
-                        return userAccount.displayName;
+                        return userAccount.name;
                 }
         }
     }
@@ -128,5 +144,21 @@ export class ActiveDirectoryIntegrationService
         if(userAccount === undefined)
             throw new Error("Should never happen2");
         return this.MapToUser_sAMAccountName(userAccount);
+    }
+
+    private async SetGroupMembers(group_sAMAccountName: string, member_sAMAccountNames: string[])
+    {
+        const currentMembers = await this.activeDirectoryService.QueryGroupMembers(group_sAMAccountName);
+        const currentMembersSet = currentMembers.Values().ToSet();
+
+        const targetSet = member_sAMAccountNames.Values().ToSet();
+
+        const toDelete = currentMembersSet.Without(targetSet);
+        const toAdd = targetSet.Without(currentMembersSet);
+
+        for (const member of toDelete)
+            await this.activeDirectoryService.RemoveMemberFromGroup(group_sAMAccountName, member);
+        for (const member of toAdd)
+            await this.activeDirectoryService.AddMemberToGroup(group_sAMAccountName, member);
     }
 }

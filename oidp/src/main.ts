@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -25,13 +25,13 @@ import { CONFIG_OIDC, CONFIG_OIDC_ISSUER } from "./env";
 import { OIDCProviderService } from "./oidc/OIDCProviderService";
 import { OpenAPI } from 'acts-util-core';
 import { APIRegistry } from 'acts-util-apilib';
-import { ActiveDirectoryService } from "./services/ActiveDirectoryService";
 import { PKIManager } from "./services/PKIManager";
 import { CORSHandler } from "./services/CORSHandler";
+import { GroupPolicyManager } from "./services/GroupPolicyManager";
 
 async function BootstrapServer()
 {
-    GlobalInjector.Resolve(ActiveDirectoryService).Initialize(); //start samba AD early
+    GlobalInjector.Resolve(GroupPolicyManager).EnsurePoliciesAreSetup();
 
     const corsHandler = GlobalInjector.Resolve(CORSHandler);
 

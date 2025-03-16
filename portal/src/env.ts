@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -16,11 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
+import { AbsURL } from "acts-util-core";
+
+const url = AbsURL.Parse(process.env.OIDP_BACKEND_URL!);
+
 export default {
-    AUTH_ENDPOINT: process.env.OIDP_AUTH_ENDPOINT!,
-    BACKEND: process.env.OIDP_BACKEND!,
-    BACKEND_PORT: process.env.OIDP_BACKEND_PORT!,
-    ENDSESSION_ENDPOINT: process.env.OIDP_ENDSESSION_ENDPOINT!,
+    BACKEND: url,
     FRONTEND_BASEURL: process.env.OIDP_FRONTEND_BASEURL!,
-    TOKEN_ENDPOINT: process.env.OIDP_TOKEN_ENDPOINT!,
+    OIDP_ENDPOINT: process.env.OIDP_OIDP_ENDPOINT!,
 };

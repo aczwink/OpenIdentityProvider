@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -132,8 +132,7 @@ export class ClientsManager
 
             return await this.usersManager.CreateUser({
                 type: "service-principal",
-                displayName: this.MapAppRegNameToSPName(appReg!.displayName + "_" + props.name),
-                externalId: crypto.randomUUID()
+                name: this.MapAppRegNameToSPName(appReg!.displayName + "_" + props.name),
             }) as number;
         }
         return null;

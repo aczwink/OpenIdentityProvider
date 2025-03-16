@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -31,7 +31,13 @@ export const CONFIG_OIDC_ISSUER = 'https://' + CONFIG_OIDC.domain +  ':' + CONFI
 export const CONFIG_AD_DOMAIN = {
     dnsForwarderIP: process.env.OIDP_DNSFORWARDERIP!,
     domain: process.env.OIDP_AD_DOMAIN!,
+    domainControllerHostName: process.env.OIDP_HOSTNAME!,
     dcIP_Address: process.env.OIDP_DCIP
 };
 
 export const CONFIG_STORAGE_ROOT_DIR = "/srv/OpenIdentityProvider";
+export const IdentityProviderName = process.env.OIDP_IDP_NAME!;
+
+export default {
+    AD_DOMAIN: CONFIG_AD_DOMAIN
+};

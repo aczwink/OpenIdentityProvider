@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2019-2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2019-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -80,7 +80,7 @@ export class UserSelectionComponent extends Component<UserSelectionInput>
             }
             const response = await this.apiService.users._any_.get(this.input.userId);
             if(response.statusCode === 200)
-                this.selectedUserName = (response.data.userAccount.type === "human") ? response.data.userAccount.givenName : response.data.userAccount.displayName;
+                this.selectedUserName = response.data.userAccount.name;
             else
                 this.input.valueChanged(null);
         }

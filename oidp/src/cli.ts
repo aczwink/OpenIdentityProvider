@@ -28,6 +28,10 @@ import { UsersManager } from "./services/UsersManager";
 import { PKIManager } from "./services/PKIManager";
 import { ClientsController } from "./data-access/ClientsController";
 import { CONFIG_OIDC_ISSUER } from "./env";
+import { ConfigController } from "./data-access/ConfigController";
+import { UserAccountsController } from "./data-access/UserAccountsController";
+import { ActiveDirectoryIntegrationService } from "./services/ActiveDirectoryIntegrationService";
+import { GroupsController } from "./data-access/GroupsController";
 
 function ReadLineFromStdIn(prompt: string, hide: boolean)
 {
@@ -143,6 +147,38 @@ async function ExecMgmtCommand(command: string | undefined, args: string[])
             await fs.promises.writeFile("./ca.crt", caCrt, "utf-8");
 
             console.log("PKI successfully written to current working directory.");
+        }
+        break;
+        case "rebuild-ad":
+        {
+            const configController = GlobalInjector.Resolve(ConfigController);
+            const userAccountsController = GlobalInjector.Resolve(UserAccountsController);
+            const groupsController = GlobalInjector.Resolve(GroupsController);
+            const activeDirectoryIntegrationService = GlobalInjector.Resolve(ActiveDirectoryIntegrationService);
+
+            await configController.Delete("AD_Admin_PW");
+
+            const users = await userAccountsController.QueryAll();
+            for (const user of users)
+            {
+                const userData = await userAccountsController.QueryByExternalId(user.id);
+                const uid = 3000000 + (await userAccountsController.QueryInternalId(user.id))!;
+                await activeDirectoryIntegrationService.SetUser(userData!, uid);
+
+                console.log("Successfully synced user", user.name);
+            }
+
+            const groups = await groupsController.QueryAll();
+            for (const group of groups)
+            {
+                const members = await userAccountsController.QueryMembers(group.id);
+                const fullMembers = await members.Values().Map(x => userAccountsController.QueryByExternalId(x.id)).Async().NotUndefined().ToArray();
+                await activeDirectoryIntegrationService.SetGroup(group.name, fullMembers);
+
+                console.log("Successfully synced group", group.name);
+            }
+
+            console.log("Done rebuilding AD. Users have to change their password and computers have to be joined manually again :S");
         }
         break;
         default:

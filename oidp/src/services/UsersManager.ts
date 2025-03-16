@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -17,7 +17,7 @@
  * */
 import crypto from "crypto";
 import { Injectable } from "acts-util-node";
-import { UserAccountData, UserAccountsController } from "../data-access/UserAccountsController";
+import { UserAccountCreationData, UserAccountData, UserAccountsController } from "../data-access/UserAccountsController";
 import { AuthenticationManager } from "./AuthenticationManager";
 import { PasswordValidationService } from "./PasswordValidationService";
 import { GroupsController } from "../data-access/GroupsController";
@@ -33,12 +33,18 @@ export class UsersManager
     }
 
     //Public methods
-    public async CreateUser(data: UserAccountData)
+    public async CreateUser(data: UserAccountCreationData)
     {
-        const error = await this.activeDirectoryIntegrationService.CreateUser(data);
+        const userData = this.PromoteUserData(data);
+        const userId = await this.userAccountsController.Create(userData);
+        const uid = this.FormUnixUserId(userId);
+
+        const error = await this.activeDirectoryIntegrationService.SetUser(userData, uid, true);
         if(error !== undefined)
+        {
+            await this.userAccountsController.Delete(userId);
             return error;
-        const userId = await this.userAccountsController.Create(data);
+        }
 
         return userId;
     }
@@ -81,5 +87,36 @@ export class UsersManager
     private CreateSalt()
     {
         return crypto.randomBytes(16).toString("hex");
+    }
+
+    private FormUnixUserId(userId: number)
+    {
+        //We reserve a cross-device unique id for a user or group so that file permissions are cross platform
+
+        //We reserve the following range of uid/gid-s for OPC users/groups: 3000000-3999999 (see https://en.wikipedia.org/wiki/User_identifier)
+        //because in samba-domain the gid of "Domain Users" is set to 3000000
+        if(userId > 9999)
+            throw new Error("User or group id is out of supported range :S");
+
+        return 3000000 + userId;
+    }
+
+    private PromoteUserData(data: UserAccountCreationData): UserAccountData
+    {
+        if(data.type === "human")
+        {
+            return {
+                eMailAddress: data.eMailAddress,
+                externalId: crypto.randomUUID(),
+                givenName: data.givenName,
+                name: data.givenName,
+                type: "human"
+            };
+        }
+        return {
+            type: "service-principal",
+            externalId: crypto.randomUUID(),
+            name: data.name
+        };
     }
 }

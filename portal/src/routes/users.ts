@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -18,11 +18,11 @@
 
 import { RouteSetup } from "acfrontendex";
 import { APIService } from "../services/APIService";
-import { FullUserAccountData, HumanUserAccount, UserAccountOverviewData } from "../../dist/api";
+import { FullUserAccountData, HumanUserAccountCreationData, UserAccountOverviewData } from "../../dist/api";
 import { OpenAPISchema } from "../api-info";
 import { Use } from "acfrontend";
 
-const createUserRoute: RouteSetup<{}, HumanUserAccount> = {
+const createUserRoute: RouteSetup<{}, HumanUserAccountCreationData> = {
     content: {
         type: "create",
         call: async (_, data) => {
@@ -31,7 +31,7 @@ const createUserRoute: RouteSetup<{}, HumanUserAccount> = {
                 alert("The users initial password is: " + response.data);
             return response;
         },
-        schema: OpenAPISchema("HumanUserAccount")
+        schema: OpenAPISchema("HumanUserAccountCreationData")
     },
     displayText: "Create user",
     icon: "person-plus",
