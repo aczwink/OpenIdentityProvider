@@ -29,7 +29,6 @@ export const CONFIG_OIDC = {
 export const CONFIG_OIDC_ISSUER = 'https://' + CONFIG_OIDC.domain +  ':' + CONFIG_OIDC.port;
 
 export const CONFIG_AD_DOMAIN = {
-    dnsForwarderIP: process.env.OIDP_DNSFORWARDERIP!,
     domain: process.env.OIDP_AD_DOMAIN!,
     domainControllerHostName: process.env.OIDP_HOSTNAME!,
     dcIP_Address: process.env.OIDP_DCIP

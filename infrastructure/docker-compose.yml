@@ -17,14 +17,37 @@ services:
       - ./dbimport:/docker-entrypoint-initdb.d/
       - ./secret/dbpw:/run/secrets/mariadb-pw
       
-  oidp:
-    container_name: oidp
-    depends_on:
-      - db
+  ad:
+    container_name: oidp-ad
     dns:
       - YOUR_OIDP_HOST_IP
       - YOUR_DNS_FORWARDER_IP
     dns_search: YOUR_AD_DOMAIN
+    environment:
+      - DNSFORWARDER=YOUR_DNS_FORWARDER_IP
+      - DOMAIN=YOUR_AD_DOMAIN_UPPERCASE
+      - DOMAIN_DC=dc=your,dc=ad,dc=domain
+      - DOMAIN_EMAIL=YOUR_AD_DOMAIN
+      - DOMAINPASS=AdminPW1234!
+      - HOSTIP=YOUR_OIDP_HOST_IP
+      - NOCOMPLEXITY=true
+    extra_hosts:
+      - dc1.YOUR_AD_DOMAIN:YOUR_OIDP_HOST_IP
+    hostname: dc1
+    image: ghcr.io/aczwink/samba-domain
+    network_mode: host
+    privileged: true
+    restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./oidp/samba_data:/var/lib/samba
+      - ./oidp/samba_config:/etc/samba/external
+
+  oidp:
+    container_name: oidp
+    depends_on:
+      - db
+      - ad
     environment:
       - OIDP_DBHOST=10.1.1.2
       - OIDP_DBUSER=oidp
@@ -33,21 +56,18 @@ services:
       - OIDP_DOMAIN=YOUR_OIDP_ENDPOINT_DOMAIN
       - OIDP_PORT=3000
       
-      - OIDP_DNSFORWARDERIP=YOUR_DNS_FORWARDER_IP
       - OIDP_AD_DOMAIN=YOUR_AD_DOMAIN
+      - OIDP_HOSTNAME=dc1
       - OIDP_DCIP=YOUR_OIDP_HOST_IP
-    extra_hosts:
-      - dc1.YOUR_AD_DOMAIN:YOUR_OIDP_HOST_IP
-    hostname: dc1
+
+      - OIDP_IDP_NAME=YOUR_OIDP_INSTANCE_NAME
     image: ghcr.io/aczwink/openidentityprovider
-    network_mode: host
-    privileged: true
+    networks:
+      oidpnet:
+        ipv4_address: 10.1.1.3
+    ports:
+      - "3000:3000"
     restart: always
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ./oidp:/srv/OpenIdentityProvider:ro
-      - ./oidp/samba_data:/var/lib/samba
-      - ./oidp/samba_config:/etc/samba/external
       
   portal:
     container_name: oidp-portal
@@ -55,13 +75,12 @@ services:
       - NGINX_HOST=localhost
       - NGINX_PORT=443 #port inside container
       - OIDP_BACKEND_URL=https://YOUR_OIDP_ENDPOINT_DOMAIN:3000
-      - OIDP_CLIENTID=OIDP_PORTAL
       - OIDP_FRONTEND_BASEURL=https://YOUR_OIDP_ENDPOINT_DOMAIN:8081
       - OIDP_OIDP_ENDPOINT=YOUR_OIDP_ENDPOINT_DOMAIN:3000
     image: ghcr.io/aczwink/openidentityprovider-portal
     networks:
       oidpnet:
-        ipv4_address: 10.1.1.3
+        ipv4_address: 10.1.1.4
     ports:
       - "8081:443"
     restart: always
@@ -75,4 +94,3 @@ networks:
      config:
        - subnet: 10.1.1.0/24
          gateway: 10.1.1.1
-

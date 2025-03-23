@@ -79,17 +79,19 @@ export class ActiveDirectoryIntegrationService
     {
         const sAMAccountName = userGroupName;
         const result = await this.activeDirectoryService.QueryGroup(sAMAccountName);
+        const member_sAMAccountNames = members.map(this.MapToUser_sAMAccountName.bind(this));
         if(result === undefined)
         {
             const result = await this.activeDirectoryService.CreateGroup(sAMAccountName);
             if(result !== undefined)
                 return result;
-            await this.SetGroupMembers(sAMAccountName, members.map(this.MapToUser_sAMAccountName.bind(this)));
+            await this.SetGroupMembers(sAMAccountName, member_sAMAccountNames);
             return;
         }
         if(failIfExisting)
             return "error_object_exists";
-        throw new Error("TODO: change group to desired state");
+
+        await this.SetGroupMembers(sAMAccountName, member_sAMAccountNames);
     }
 
     public async SetUser(data: UserAccountData, uid: number, failIfExisting: boolean = false)

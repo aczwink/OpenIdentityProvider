@@ -124,6 +124,17 @@ export class UserAccountsController
 
         return this.QueryFullUserData(row);
     }
+
+    public async QueryByEMailAddress(eMailAddress: string)
+    {
+        const conn = await this.dbConnMgr.CreateAnyConnectionQueryExecutor();
+        const row = await conn.SelectOne("SELECT userId FROM users_human WHERE eMailAddress = ?", eMailAddress);
+
+        if(row === undefined)
+            return undefined;
+
+        return row?.userId as number;
+    }
     
     public async QueryByExternalId(externalId: string)
     {

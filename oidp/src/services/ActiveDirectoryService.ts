@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 import crypto from "crypto";
+import fs from "fs";
 import { Injectable } from "acts-util-node";
 import { UserAccountData } from "../data-access/UserAccountsController";
 import ENV from "../env";
@@ -52,6 +53,29 @@ interface GPOProperties
     displayName: string;
 }
 
+interface DWORDValue
+{
+    type: "REG_DWORD";
+    data: number;
+}
+
+interface StringValue
+{
+    type: "REG_EXPAND_SZ" | "REG_SZ";
+    data: string;
+}
+
+type GPOValue = DWORDValue | StringValue;
+
+interface GPOPolicyVariableDefinition
+{
+    class: "MACHINE" | "USER";
+    keyname: string;
+    valuename: string;
+}
+
+export type GPOPolicyValueDefinition = GPOPolicyVariableDefinition & GPOValue;
+
 const admin_sAMAccountName = "administrator";
 const initialAdminPW = "AdminPW1234!";
 
@@ -79,6 +103,27 @@ export class ActiveDirectoryService
     public async AddMessageOfTheDayPolicyToGPO(gpoId: string, message: string)
     {
         await this.CallSambaTool(["gpo", "manage", "motd", "set", gpoId, message], SambaToolAuth.IPAddressRealmAndWorkgroup);
+    }
+
+    public async AddPolicyToGPO(gpoId: string, policyDefinition: GPOPolicyValueDefinition[])
+    {
+        /*
+        #TODO: we require samba 4.20 at least (for loading GPOs; 4.19 has a bug)
+        #TODO: even for ubuntu:25.04 samba remote auth seems to be broken :S
+        #TODO: even for ubuntu:latest the remote loading does not seem to be possible -.-
+        For now we write this into a file to a shared location by this and the AD container, and the AD container will import it
+
+        const stdin = JSON.stringify(policyDefinition);
+        await this.CallSambaTool(["gpo", "load", gpoId], SambaToolAuth.LDB_URL, stdin);
+        */
+
+        const adminPW = await this.GetAdminPassword();
+
+        const authPath = "/srv/OpenIdentityProvider/gpos/AUTH";
+        await fs.promises.writeFile(authPath, "username=Administrator\npassword=" + adminPW);
+
+        const gpoPath = "/srv/OpenIdentityProvider/gpos/" + gpoId;
+        await fs.promises.writeFile(gpoPath, JSON.stringify(policyDefinition));
     }
 
     public async AddStartupScriptPolicyToGPO(gpoId: string, scriptPath: string)
@@ -109,7 +154,7 @@ export class ActiveDirectoryService
 
     public async CreateGroup(sAMAccountName: string)
     {
-        const result = await this.CallSambaTool([
+        const result = await this.CallSambaToolWithExitCode([
             "group", "add",
             sAMAccountName,
         ], SambaToolAuth.LDB_URL);
@@ -135,7 +180,7 @@ export class ActiveDirectoryService
             );
         }
 
-        const result = await this.CallSambaTool([
+        const result = await this.CallSambaToolWithExitCode([
             "user", "add",
             sAMAccountName,
             "--random-password",
@@ -254,7 +299,7 @@ export class ActiveDirectoryService
 
     public async QueryGroup(sAMAccountName: string)
     {
-        const result = await this.CallSambaTool(["group", "show", sAMAccountName], SambaToolAuth.LDB_URL);
+        const result = await this.CallSambaToolWithExitCode(["group", "show", sAMAccountName], SambaToolAuth.LDB_URL);
         if(result.exitCode === 255)
             return undefined;
         if(result.exitCode === 0)
@@ -273,7 +318,7 @@ export class ActiveDirectoryService
 
     public async QueryUser(sAMAccountName: string)
     {
-        const result = await this.CallSambaTool(["user", "show", sAMAccountName], SambaToolAuth.LDB_URL);
+        const result = await this.CallSambaToolWithExitCode(["user", "show", sAMAccountName], SambaToolAuth.LDB_URL);
         if(result.exitCode === 255)
             return undefined;
         if(result.exitCode === 0)
@@ -298,13 +343,23 @@ export class ActiveDirectoryService
     }
 
     //Private methods
-    private async CallSambaTool(command: string[], auth: SambaToolAuth)
+    private async CallSambaTool(command: string[], auth: SambaToolAuth, stdin?: string)
     {
-        const adminPW = await this.GetAdminPassword();
-        return await this.CallSambaToolAsUser(command, auth, admin_sAMAccountName, adminPW);
+        const result = await this.CallSambaToolWithExitCode(command, auth, stdin);
+        if(result.exitCode !== 0)
+            throw new Error("An error occured for command: " + command.join(" "))
+        return {
+            stdOut: result.stdOut
+        };
     }
 
-    private async CallSambaToolAsUser(command: string[], auth: SambaToolAuth, userName: string, password: string)
+    private async CallSambaToolWithExitCode(command: string[], auth: SambaToolAuth, stdin?: string)
+    {
+        const adminPW = await this.GetAdminPassword();
+        return await this.CallSambaToolAsUser(command, auth, admin_sAMAccountName, adminPW, stdin);
+    }
+
+    private async CallSambaToolAsUser(command: string[], auth: SambaToolAuth, userName: string, password: string, stdin?: string)
     {
         command.unshift("samba-tool");
 
@@ -331,7 +386,7 @@ export class ActiveDirectoryService
         return await this.commandExecutor.ExecWithExitCode(command, {
             PASSWD: password,
             USER: userName,
-        });
+        }, stdin);
     }
 
     private async GetAdminPassword()

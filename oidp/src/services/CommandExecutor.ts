@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -35,7 +35,7 @@ export class CommandExecutor
         });
     }
 
-    public ExecWithExitCode(command: string[], env?: any)
+    public ExecWithExitCode(command: string[], env?: any, stdin?: string)
     {
         const commandLine = command.map(this.EscapeCommandArg.bind(this)).join(" ");
 
@@ -49,6 +49,9 @@ export class CommandExecutor
         let stdOut = "";
         child.stdout.setEncoding("utf-8");
         child.stdout.on("data", x => stdOut += x);
+
+        if(stdin !== undefined)
+            child.stdin.end(Buffer.from(stdin, "utf-8"));
 
         return new Promise<{ exitCode: number; stdOut: string; }>( resolve => {
             child.on("exit", exitCode => {

@@ -17,11 +17,15 @@
  * */
 import fs from "fs";
 import { Injectable } from "acts-util-node";
-import { ActiveDirectoryService } from "./ActiveDirectoryService";
+import { ActiveDirectoryService, GPOPolicyValueDefinition } from "./ActiveDirectoryService";
 import { PKIManager } from "./PKIManager";
 
 const caGPOName = "OIDP:DistributeCA";
+const firefoxPoliciesGPOName = "OIDP:FirefoxPolicies";
 
+/*
+We never install GPO templates, because we actually don't even want people to manage policies via Windows GPMC
+*/
 @Injectable
 export class GroupPolicyManager
 {
@@ -32,13 +36,20 @@ export class GroupPolicyManager
     //Public methods
     public async EnsurePoliciesAreSetup()
     {
-        const gpos = await this.activeDirectoryService.ListGPOs();
-        const caGPO = gpos.find(x => x.displayName === caGPOName);
-        if(caGPO === undefined)
+        if(!await this.DoesGPOExist(caGPOName))
             await this.SetupCAGPO();
+        if(!await this.DoesGPOExist(firefoxPoliciesGPOName))
+            await this.SetupFirefoxPoliciesGPO();
     }
 
     //Private methods
+    private async DoesGPOExist(displayName: string)
+    {
+        const gpos = await this.activeDirectoryService.ListGPOs();
+        const gpo = gpos.find(x => x.displayName === displayName);
+        return gpo !== undefined;
+    }
+
     private async GenerateCAScript()
     {
         const cert = await this.pkiManager.LoadCACert();
@@ -48,6 +59,8 @@ export class GroupPolicyManager
 if [ $NAME="Ubuntu" ]
 then
     echo "${cert}" > /usr/local/share/ca-certificates/oidp-devad.home.arpa.crt
+    mkdir -p /etc/firefox/policies/
+    cp /usr/local/share/ca-certificates/oidp-devad.home.arpa.crt /etc/firefox/policies/
     update-ca-certificates
 else
     echo "Unknown distro :S"
@@ -61,10 +74,32 @@ fi`;
         const scriptPath = "/srv/distribute_ca.sh";
         await fs.promises.writeFile(scriptPath, script, "utf-8");
 
-        await this.activeDirectoryService.InstallSambaGPOs();
-
         const gpoId = await this.activeDirectoryService.CreateGPO(caGPOName);
         await this.activeDirectoryService.AddStartupScriptPolicyToGPO(gpoId, scriptPath);
+        await this.activeDirectoryService.LinkGPOToDomain(gpoId);
+    }
+
+    private async SetupFirefoxPoliciesGPO()
+    {
+        const policyDefinition: GPOPolicyValueDefinition[] = [
+            {
+                "keyname": "Software\\Policies\\Mozilla\\Firefox\\Certificates\\Install",
+                "valuename": "0",
+                "class": "MACHINE",
+                "type": "REG_EXPAND_SZ",
+                "data": "/etc/ssl/certs/oidp-devad.home.arpa.pem"
+            },
+            {
+                "keyname": "Software\\Policies\\Mozilla\\Firefox\\Certificates\\Install",
+                "valuename": "1",
+                "class": "MACHINE",
+                "type": "REG_EXPAND_SZ",
+                "data": "/etc/firefox/policies/oidp-devad.home.arpa.crt"
+            }
+        ];
+
+        const gpoId = await this.activeDirectoryService.CreateGPO(firefoxPoliciesGPOName);
+        await this.activeDirectoryService.AddPolicyToGPO(gpoId, policyDefinition);
         await this.activeDirectoryService.LinkGPOToDomain(gpoId);
     }
 }

@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -113,7 +113,7 @@ interactionsRouter.get('/interaction/:uid', setNoCache, async function(req: expr
 interactionsRouter.post('/interaction/:uid/login', setNoCache, parseURLEncodedBody, async (req, res, next) =>
 {
     const interactionDetails = await oidcProviderService.provider.interactionDetails(req, res);
-    const result = await interactionsManager.HandleAuth(interactionDetails, req.body.login, req.body.password);
+    const result = await interactionsManager.HandleInteractiveAuth(interactionDetails, req.body.login, req.body.password);
     await oidcProviderService.provider.interactionFinished(req, res, result, { mergeWithLastSubmission: false });
 });
 
