@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -32,6 +32,44 @@ import { ConfigController } from "./data-access/ConfigController";
 import { UserAccountsController } from "./data-access/UserAccountsController";
 import { ActiveDirectoryIntegrationService } from "./services/ActiveDirectoryIntegrationService";
 import { GroupsController } from "./data-access/GroupsController";
+import { ActiveDirectoryDNSManager } from "./services/ActiveDirectoryDNSManager";
+import { DNSController } from "./data-access/DNSController";
+
+async function SyncAD()
+{
+    const userAccountsController = GlobalInjector.Resolve(UserAccountsController);
+    const groupsController = GlobalInjector.Resolve(GroupsController);
+    const activeDirectoryIntegrationService = GlobalInjector.Resolve(ActiveDirectoryIntegrationService);
+    const activeDirectoryDNSManager = GlobalInjector.Resolve(ActiveDirectoryDNSManager);
+    const dnsController = GlobalInjector.Resolve(DNSController);
+
+    const users = await userAccountsController.QueryAll();
+    for (const user of users)
+    {
+        const userData = await userAccountsController.QueryByExternalId(user.id);
+        const uid = 3000000 + (await userAccountsController.QueryInternalId(user.id))!;
+        await activeDirectoryIntegrationService.SetUser(userData!, uid);
+
+        console.log("Successfully synced user", user.name);
+    }
+
+    const groups = await groupsController.QueryAll();
+    for (const group of groups)
+    {
+        const members = await userAccountsController.QueryMembers(group.id);
+        const fullMembers = await members.Values().Map(x => userAccountsController.QueryByExternalId(x.id)).Async().NotUndefined().ToArray();
+        await activeDirectoryIntegrationService.SetGroup(group.name, fullMembers);
+
+        console.log("Successfully synced group", group.name);
+    }
+
+    const zones = await dnsController.QueryZones();
+    for (const zone of zones)
+    {
+        await activeDirectoryDNSManager.SynchronizeZone(zone.id);
+        console.log("Successfully synced DNS zone", zone.name);
+    }
+}
 
 function ReadLineFromStdIn(prompt: string, hide: boolean)
 {
@@ -152,33 +190,17 @@ async function ExecMgmtCommand(command: string | undefined, args: string[])
         case "rebuild-ad":
         {
             const configController = GlobalInjector.Resolve(ConfigController);
-            const userAccountsController = GlobalInjector.Resolve(UserAccountsController);
-            const groupsController = GlobalInjector.Resolve(GroupsController);
-            const activeDirectoryIntegrationService = GlobalInjector.Resolve(ActiveDirectoryIntegrationService);
 
             await configController.Delete("AD_Admin_PW");
-
-            const users = await userAccountsController.QueryAll();
-            for (const user of users)
-            {
-                const userData = await userAccountsController.QueryByExternalId(user.id);
-                const uid = 3000000 + (await userAccountsController.QueryInternalId(user.id))!;
-                await activeDirectoryIntegrationService.SetUser(userData!, uid);
-
-                console.log("Successfully synced user", user.name);
-            }
-
-            const groups = await groupsController.QueryAll();
-            for (const group of groups)
-            {
-                const members = await userAccountsController.QueryMembers(group.id);
-                const fullMembers = await members.Values().Map(x => userAccountsController.QueryByExternalId(x.id)).Async().NotUndefined().ToArray();
-                await activeDirectoryIntegrationService.SetGroup(group.name, fullMembers);
-
-                console.log("Successfully synced group", group.name);
-            }
+            await SyncAD();
 
             console.log("Done rebuilding AD. Users have to change their password and computers have to be joined manually again :S");
+        }
+        break;
+        case "sync-ad":
+        {
+            await SyncAD();
+            console.log("AD synchronization finished. If users have been (re)created on AD, they have to change their password via OIDP portal :S");
         }
         break;
         default:

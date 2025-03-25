@@ -1,4 +1,6 @@
 #!/bin/bash
+/init.sh &
+sleep 30
 
 while true
 do

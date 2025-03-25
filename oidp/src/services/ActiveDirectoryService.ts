@@ -20,7 +20,7 @@ import fs from "fs";
 import { Injectable } from "acts-util-node";
 import { UserAccountData } from "../data-access/UserAccountsController";
 import ENV from "../env";
-import { DNSRecord, DNSZone } from "../data-access/DNSController";
+import { DNSRecord, DNSRecordType, DNSZone } from "../data-access/DNSController";
 import { ConfigController } from "../data-access/ConfigController";
 import { Of } from "acts-util-core";
 import { CommandExecutor } from "./CommandExecutor";
@@ -75,6 +75,13 @@ interface GPOPolicyVariableDefinition
 }
 
 export type GPOPolicyValueDefinition = GPOPolicyVariableDefinition & GPOValue;
+
+interface UserProperties
+{
+    givenName?: string;
+    mail?: string;
+    uidNumber?: string;
+}
 
 const admin_sAMAccountName = "administrator";
 const initialAdminPW = "AdminPW1234!";
@@ -131,10 +138,10 @@ export class ActiveDirectoryService
         await this.CallSambaTool(["gpo", "manage", "scripts", "startup", "add", gpoId, scriptPath], SambaToolAuth.IPAddressRealmAndWorkgroup);
     }
 
-    public async CreateDNSRecord(zone: DNSZone, record: DNSRecord)
+    public async CreateDNSRecord(zoneName: string, record: DNSRecord)
     {
         const dcName = this.GetDomainControllerDomainName();
-        await this.CallSambaTool(["dns", "add", dcName, zone.name, record.label, record.recordType, record.value], SambaToolAuth.None);
+        await this.CallSambaTool(["dns", "add", dcName, zoneName, record.label, record.recordType, record.value], SambaToolAuth.None);
     }
 
     public async CreateDNSZone(name: string)
@@ -221,17 +228,8 @@ export class ActiveDirectoryService
     public async FetchComputerDetails(computerName: string)
     {
         const { stdOut } = await this.CallSambaTool(["computer", "show", computerName], SambaToolAuth.LDB_URL);
-        const lines = stdOut.trim().split("\n");
-        const kvs = lines.Values().Map(x => {
-            const idx = x.indexOf(":");
+        const dict = this.ParseLineBasedKeyValuePairs(stdOut);
 
-            return {
-                kev: x.substring(0, idx),
-                value: x.substring(idx + 2)
-            };
-        });
-
-        const dict = kvs.GroupBy(x => x.kev).ToDictionary(x => x.value[0].kev, x => (x.value.length === 1) ? x.value[0].value : x.value.map(y => y.value));
         return dict as unknown as ComputerProperties;
     }
 
@@ -268,26 +266,26 @@ export class ActiveDirectoryService
         const gpos = [];
         for (const block of blocks)
         {
-            const lines = block.split("\n");
-
             const gpo: GPOProperties = {
                 displayName: "",
                 gpoId: ""
             };
-            for (const line of lines)
+            const kvs = this.ParseLineBasedKeyValuePairs(block);
+            for (const key in kvs)
             {
-                const pos = line.indexOf(":");
-                const key = line.substring(0, pos).trim();
-                const value = line.substring(pos + 1).trim();
-
-                switch(key)
+                if (Object.prototype.hasOwnProperty.call(kvs, key))
                 {
-                    case "GPO":
-                        gpo.gpoId = value;
-                        break;
-                    case "display name":
-                        gpo.displayName = value;
-                        break;
+                    const value = kvs[key]! as string;
+
+                    switch(key)
+                    {
+                        case "GPO":
+                            gpo.gpoId = value;
+                            break;
+                        case "display name":
+                            gpo.displayName = value;
+                            break;
+                    }
                 }
             }
 
@@ -295,6 +293,34 @@ export class ActiveDirectoryService
         }
 
         return gpos;
+    }
+
+    public async QueryDNSRecordValue(zoneName: string, label: string, recordType: DNSRecordType)
+    {
+        const dcName = this.GetDomainControllerDomainName();
+        const result = await this.CallSambaToolWithExitCode(["dns", "query", dcName, zoneName, label, recordType], SambaToolAuth.None);
+        if(result.exitCode === 255)
+            return undefined;
+        const lines = result.stdOut.trim().split("\n");
+        if(lines.length !== 2)
+            throw new Error("TODO");
+        const parts = lines[1].trim().split(" ");
+        const value = parts[1];
+
+        return value;
+    }
+
+    public async QueryDNSZone(zoneName: string)
+    {
+        const dcName = this.GetDomainControllerDomainName();
+        const result = await this.CallSambaToolWithExitCode(["dns", "zoneinfo", dcName, zoneName], SambaToolAuth.None);
+        if(result.exitCode === 255)
+            return undefined;
+        if(result.exitCode === 0)
+            return null;
+        //const kvs = this.ParseLineBasedKeyValuePairs(result.stdOut)
+        //console.log(kvs);
+        throw new Error("TODO: not implemented");
     }
 
     public async QueryGroup(sAMAccountName: string)
@@ -322,7 +348,10 @@ export class ActiveDirectoryService
         if(result.exitCode === 255)
             return undefined;
         if(result.exitCode === 0)
-            return null; //TODO: user exists, return data
+        {
+            const kvs = this.ParseLineBasedKeyValuePairs(result.stdOut);
+            return kvs as UserProperties;
+        }
         throw new Error("TODO: not implemented");
     }
 
@@ -432,12 +461,30 @@ export class ActiveDirectoryService
         return ENV.AD_DOMAIN.domain.toUpperCase();
     }
 
+    private ParseLineBasedKeyValuePairs(stdOut: string)
+    {
+        const lines = stdOut.trim().split("\n");
+        const kvs = lines.Values().Map(x => {
+            const idx = x.indexOf(":");
+
+            return {
+                kev: x.substring(0, idx).trim(),
+                value: x.substring(idx + 2)
+            };
+        });
+
+        const dict = kvs.GroupBy(x => x.kev).ToDictionary(x => x.value[0].kev, x => (x.value.length === 1) ? x.value[0].value : x.value.map(y => y.value));
+        return dict;
+    }
+
     /**
      * Be aware that calling this, automatically enables a user!
      */
     private async SetUserPasswordInternal(sAMAccountName: string, newPassword: string, adminPW: string)
     {
         //there is currently no better option that this. The stdin method does not work reliably
-        await this.CallSambaToolAsUser(["user", "setpassword", sAMAccountName, '--newpassword="' + newPassword + '"'], SambaToolAuth.LDB_URL, admin_sAMAccountName, adminPW);
+        const result = await this.CallSambaToolAsUser(["user", "setpassword", sAMAccountName, '--newpassword="' + newPassword + '"'], SambaToolAuth.LDB_URL, admin_sAMAccountName, adminPW);
+        if(result.exitCode !== 0)
+            throw new Error("TODO: couldn't set password");
     }
 }

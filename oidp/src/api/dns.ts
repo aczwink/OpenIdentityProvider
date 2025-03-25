@@ -1,6 +1,6 @@
 /**
  * OpenIdentityProvider
- * Copyright (C) 2024 Amir Czwink (amir130@hotmail.de)
+ * Copyright (C) 2024-2025 Amir Czwink (amir130@hotmail.de)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -77,7 +77,7 @@ class _api2_
             return NotFound("zone not found");
 
         await this.dnsController.CreateRecord(zoneId, record);
-        await this.activeDirectoryService.CreateDNSRecord(zone, record);
+        await this.activeDirectoryService.CreateDNSRecord(zone.name, record);
     }
 
     @Delete("{label}")

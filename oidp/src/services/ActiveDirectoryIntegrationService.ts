@@ -102,7 +102,12 @@ export class ActiveDirectoryIntegrationService
             return await this.activeDirectoryService.CreateUser(sAMAccountName, data, uid);
         if(failIfExisting)
             return "error_object_exists";
-        throw new Error("TODO: change user to desired state");
+
+        const isEqualGeneral = (uid.toString() === result.uidNumber);
+        const isEqualSpecific = (data.type === "human") ? (data.eMailAddress === result.mail) && (data.givenName === result.givenName) : true;
+        const isEqual = isEqualGeneral && isEqualSpecific;
+        if(!isEqual)
+            throw new Error("TODO: change user to desired state");
     }
 
     public async SetUserPassword(userId: number, newPassword: string)

@@ -122,6 +122,14 @@ jobs:
         push: true
         tags: ghcr.io/aczwink/openidentityprovider:latest
 
+    - name: Build and push oidp image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./oidp-ad
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ghcr.io/aczwink/openidentityprovider-addc:latest
+
     - name: Build and push oidp portal image
       uses: docker/build-push-action@v4
       with:
