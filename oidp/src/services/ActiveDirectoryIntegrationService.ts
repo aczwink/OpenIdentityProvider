@@ -103,11 +103,20 @@ export class ActiveDirectoryIntegrationService
         if(failIfExisting)
             return "error_object_exists";
 
-        const isEqualGeneral = (uid.toString() === result.uidNumber);
-        const isEqualSpecific = (data.type === "human") ? (data.eMailAddress === result.mail) && (data.givenName === result.givenName) : true;
-        const isEqual = isEqualGeneral && isEqualSpecific;
-        if(!isEqual)
-            throw new Error("TODO: change user to desired state");
+        if(uid.toString() !== result.uidNumber)
+        {
+            if(result.uidNumber === undefined)
+                await this.activeDirectoryService.AddUnixAttributesToUser(sAMAccountName, data, uid);
+            else
+                throw new Error("TODO: change user uid");
+        }
+
+        if(data.type === "human")
+        {
+            const isEqual = (data.eMailAddress === result.mail) && (data.givenName === result.givenName);
+            if(!isEqual)
+                throw new Error("TODO: change user to desired state");
+        }
     }
 
     public async SetUserPassword(userId: number, newPassword: string)

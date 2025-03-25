@@ -138,6 +138,27 @@ export class ActiveDirectoryService
         await this.CallSambaTool(["gpo", "manage", "scripts", "startup", "add", gpoId, scriptPath], SambaToolAuth.IPAddressRealmAndWorkgroup);
     }
 
+    public async AddUnixAttributesToUser(sAMAccountName: string, account: UserAccountData, uid: number)
+    {
+        const names = await this.GetUserNames(sAMAccountName);
+
+        const args = [];
+        if(account.type === "human")
+        {
+            args.push(
+                "--login-shell=/bin/bash",
+                "--unix-home=/home/" + names.userPrincipalName,
+            );
+        }
+
+        await this.CallSambaTool([
+            "user", "addunixattrs",
+            sAMAccountName,
+            uid.toString(),
+            ...args,
+        ], SambaToolAuth.LDB_URL);
+    }
+
     public async CreateDNSRecord(zoneName: string, record: DNSRecord)
     {
         const dcName = this.GetDomainControllerDomainName();
