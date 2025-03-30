@@ -259,7 +259,7 @@ export class ActiveDirectoryService
         return Of<ActiveDirectoryUserNames>({
             netBiosName: this.GetNetBiosName() + "\\" + sAMAccountName,
             sAMAccountName,
-            userPrincipalName: sAMAccountName + "@" + ENV.AD_DOMAIN.domain
+            userPrincipalName: sAMAccountName.toLowerCase() + "@" + ENV.AD_DOMAIN.domain
         });
     }
 
