@@ -1,4 +1,5 @@
 # OpenIdentityProvider
+[![Build docker images](https://github.com/aczwink/OpenIdentityProvider/actions/workflows/docker-image.yml/badge.svg)](https://github.com/aczwink/OpenIdentityProvider/actions/workflows/docker-image.yml)
 Identity provider software
 
 ## Generation of keys
